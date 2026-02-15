@@ -2,10 +2,11 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
+import requests
+from io import BytesIO
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import base64
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -19,7 +20,6 @@ st.markdown("""
 
 .stApp {
     background: linear-gradient(to right, #eef2ff, #f8fafc);
-    transition: all 0.5s ease-in-out;
 }
 
 .main-title {
@@ -105,6 +105,7 @@ if uploaded_file:
     predicted_class = class_names[np.argmax(prediction)]
     confidence = float(np.max(prediction))
 
+    # Risk logic
     if predicted_class == "falling":
         risk = "HIGH"
         color = "red"
@@ -139,16 +140,19 @@ if uploaded_file:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # -------- ALERT --------
+        # -------- ALERT + WORKING ALARM --------
         if predicted_class == "falling" and confidence > 0.75:
+
             st.markdown(
                 '<div class="alert">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
                 unsafe_allow_html=True
             )
 
-            # Alarm Sound
-            alarm_file = open("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg", "rb")
-            st.audio(alarm_file.read(), format="audio/ogg")
+            # Download alarm sound safely
+            alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+            response = requests.get(alarm_url)
+
+            st.audio(BytesIO(response.content), format="audio/ogg")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
