@@ -5,64 +5,48 @@ from PIL import Image
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import requests
+from io import BytesIO
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="Radar Intelligent Surveillance",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
 # ---------------- CUSTOM CSS ----------------
 st.markdown("""
 <style>
-
 .stApp {
     background: linear-gradient(to right, #eef2ff, #f8fafc);
 }
 
+/* Main Title */
 .main-title {
     text-align:center;
-    font-size:50px;
-    font-weight:800;
-    color:#2b2d42;
-    animation: fadeIn 1.5s ease-in;
+    font-size:60px;
+    font-weight:900;
+    color:#1f2937;
 }
 
-@keyframes fadeIn {
-    from {opacity:0;}
-    to {opacity:1;}
-}
-
-.card {
-    padding:25px;
-    border-radius:18px;
-    background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(12px);
-    box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
-}
-
-.card:hover {
-    transform: scale(1.02);
-}
-
-.alert-box {
-    padding:25px;
-    border-radius:16px;
-    background-color:#ffccd5;
-    color:#b00020;
-    font-weight:800;
-    font-size:22px;
+/* Subtitle */
+.sub-title {
     text-align:center;
-    animation: pulse 1s infinite;
+    font-size:22px;
+    color:#4b5563;
+    margin-bottom:20px;
 }
 
-@keyframes pulse {
-    0% {box-shadow:0 0 0 0 rgba(255,0,0,0.5);}
-    70% {box-shadow:0 0 0 20px rgba(255,0,0,0);}
-    100% {box-shadow:0 0 0 0 rgba(255,0,0,0);}
+/* Feature Cards */
+.feature-card {
+    background: white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    text-align:center;
+    font-weight:600;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -75,29 +59,45 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 # ---------------- HEADER ----------------
-st.markdown('<p class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</p>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🚀 Radar-Based Intelligent Surveillance System</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">AI-Powered Human Activity Detection using Radar Spectrogram Analysis</div>', unsafe_allow_html=True)
+
 st.write("")
+
+# ---------------- FEATURE SECTION ----------------
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown('<div class="feature-card">📡 Real-time Activity Detection</div>', unsafe_allow_html=True)
+
+with col2:
+    st.markdown('<div class="feature-card">🧠 Deep Learning CNN Model</div>', unsafe_allow_html=True)
+
+with col3:
+    st.markdown('<div class="feature-card">🚨 Automatic Risk Alert System</div>', unsafe_allow_html=True)
+
+with col4:
+    st.markdown('<div class="feature-card">📊 Intelligent Analytics Dashboard</div>', unsafe_allow_html=True)
+
+st.write("")
+st.write("---")
 
 # ---------------- FILE UPLOAD ----------------
 uploaded_file = st.file_uploader(
-    "📡 Upload Radar Spectrogram",
+    "📡 Upload Radar Spectrogram Image",
     type=["png","jpg","jpeg"]
 )
 
-# ---------------- PROCESS IMAGE ----------------
 if uploaded_file:
 
-    col1, col2 = st.columns([1,1])
+    col_img, col_result = st.columns([1,1])
 
-    # IMAGE CARD
-    with col1:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+    with col_img:
         image = Image.open(uploaded_file)
         st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
 
-    # Preprocess
-    img = image.resize((160,160))
+    # 🔥 IMPORTANT: MODEL TRAINED ON 128x128
+    img = image.resize((128,128))
     img_array = np.array(img)/255.0
     img_array = np.expand_dims(img_array, axis=0)
 
@@ -106,25 +106,24 @@ if uploaded_file:
     predicted_class = class_names[np.argmax(prediction)]
     confidence = float(np.max(prediction))
 
-    # Risk Logic
-    if predicted_class == "falling":
-        risk = "HIGH"
-        color = "red"
+    # ---------------- SMART RISK ENGINE ----------------
+    if predicted_class == "falling" and confidence > 0.70:
+        risk = "🔴 HIGH"
+        alarm_trigger = True
+    elif predicted_class == "falling":
+        risk = "🟠 MEDIUM"
+        alarm_trigger = False
     elif predicted_class == "sitting":
-        risk = "MEDIUM"
-        color = "orange"
+        risk = "🟡 LOW"
+        alarm_trigger = False
     else:
-        risk = "LOW"
-        color = "green"
+        risk = "🟢 SAFE"
+        alarm_trigger = False
 
     st.session_state.history.append(predicted_class)
 
-    # DASHBOARD CARD
-    with col2:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-
+    with col_result:
         st.subheader("📊 Prediction Summary")
-
         st.metric("Predicted Activity", predicted_class.upper())
         st.metric("Confidence Score", f"{confidence*100:.2f}%")
         st.metric("Risk Level", risk)
@@ -133,62 +132,38 @@ if uploaded_file:
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=confidence*100,
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': color},
-            },
+            gauge={'axis': {'range': [0, 100]}},
             title={'text': "Confidence Meter"}
         ))
-
         st.plotly_chart(fig, use_container_width=True)
 
-        # -------- AUTO ALERT --------
-        if predicted_class == "falling" and confidence > 0.75:
+        # -------- ALERT + AUTO SOUND --------
+        if alarm_trigger:
+            st.error("🚨 HIGH RISK ACTIVITY DETECTED!")
 
-            st.markdown(
-                '<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
-                unsafe_allow_html=True
-            )
-
-            # Auto-play alarm sound
             alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+            response = requests.get(alarm_url)
 
-            st.markdown(f"""
-                <audio autoplay>
-                    <source src="{alarm_url}" type="audio/ogg">
-                </audio>
-            """, unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.audio(BytesIO(response.content), format="audio/ogg")
 
 # ---------------- ANALYTICS ----------------
 if st.session_state.history:
 
     st.write("")
-    st.header("📈 Intelligent Surveillance Analytics")
+    st.header("📈 Surveillance Analytics")
 
     history_df = pd.DataFrame(st.session_state.history, columns=["Activity"])
 
-    col3, col4 = st.columns(2)
+    col_a, col_b = st.columns(2)
 
-    with col3:
-        fig = px.pie(
-            history_df,
-            names="Activity",
-            title="Activity Distribution"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    with col_a:
+        fig1 = px.pie(history_df, names="Activity", title="Activity Distribution")
+        st.plotly_chart(fig1, use_container_width=True)
 
-    with col4:
-        fig2 = px.histogram(
-            history_df,
-            x="Activity",
-            color="Activity",
-            title="Detected Activity Count"
-        )
+    with col_b:
+        fig2 = px.histogram(history_df, x="Activity", color="Activity", title="Activity Count")
         st.plotly_chart(fig2, use_container_width=True)
 
-# ---------------- FOOTER ----------------
 st.write("---")
-st.caption("AI Radar Surveillance System | Final Year Deep Learning Project")
+st.caption("Final Year Deep Learning Project | Radar HAR Surveillance System")
 
