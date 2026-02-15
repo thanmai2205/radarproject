@@ -2,8 +2,6 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
-import requests
-from io import BytesIO
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -24,7 +22,7 @@ st.markdown("""
 
 .main-title {
     text-align:center;
-    font-size:48px;
+    font-size:50px;
     font-weight:800;
     color:#2b2d42;
     animation: fadeIn 1.5s ease-in;
@@ -48,19 +46,20 @@ st.markdown("""
     transform: scale(1.02);
 }
 
-.alert {
-    padding:20px;
-    border-radius:14px;
+.alert-box {
+    padding:25px;
+    border-radius:16px;
     background-color:#ffccd5;
     color:#b00020;
-    font-weight:700;
+    font-weight:800;
+    font-size:22px;
     text-align:center;
-    animation: pulse 1.2s infinite;
+    animation: pulse 1s infinite;
 }
 
 @keyframes pulse {
-    0% {box-shadow:0 0 0 0 rgba(255,0,0,0.4);}
-    70% {box-shadow:0 0 0 15px rgba(255,0,0,0);}
+    0% {box-shadow:0 0 0 0 rgba(255,0,0,0.5);}
+    70% {box-shadow:0 0 0 20px rgba(255,0,0,0);}
     100% {box-shadow:0 0 0 0 rgba(255,0,0,0);}
 }
 
@@ -90,12 +89,14 @@ if uploaded_file:
 
     col1, col2 = st.columns([1,1])
 
+    # IMAGE CARD
     with col1:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         image = Image.open(uploaded_file)
         st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # Preprocess
     img = image.resize((160,160))
     img_array = np.array(img)/255.0
     img_array = np.expand_dims(img_array, axis=0)
@@ -105,7 +106,7 @@ if uploaded_file:
     predicted_class = class_names[np.argmax(prediction)]
     confidence = float(np.max(prediction))
 
-    # Risk logic
+    # Risk Logic
     if predicted_class == "falling":
         risk = "HIGH"
         color = "red"
@@ -118,6 +119,7 @@ if uploaded_file:
 
     st.session_state.history.append(predicted_class)
 
+    # DASHBOARD CARD
     with col2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
@@ -140,19 +142,22 @@ if uploaded_file:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # -------- ALERT + WORKING ALARM --------
+        # -------- AUTO ALERT --------
         if predicted_class == "falling" and confidence > 0.75:
 
             st.markdown(
-                '<div class="alert">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
+                '<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
                 unsafe_allow_html=True
             )
 
-            # Download alarm sound safely
+            # Auto-play alarm sound
             alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
-            response = requests.get(alarm_url)
 
-            st.audio(BytesIO(response.content), format="audio/ogg")
+            st.markdown(f"""
+                <audio autoplay>
+                    <source src="{alarm_url}" type="audio/ogg">
+                </audio>
+            """, unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -186,3 +191,4 @@ if st.session_state.history:
 # ---------------- FOOTER ----------------
 st.write("---")
 st.caption("AI Radar Surveillance System | Final Year Deep Learning Project")
+
