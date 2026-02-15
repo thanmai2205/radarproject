@@ -20,17 +20,36 @@ st.markdown("""
     background: linear-gradient(to right, #eef2ff, #f8fafc);
 }
 
+/* BIG ATTRACTIVE TITLE */
 .main-title {
     text-align:center;
-    font-size:50px;
-    font-weight:800;
-    color:#2b2d42;
-    animation: fadeIn 1.5s ease-in;
+    font-size:70px;
+    font-weight:900;
+    color:#1e293b;
+    letter-spacing:1px;
 }
 
-@keyframes fadeIn {
-    from {opacity:0;}
-    to {opacity:1;}
+/* SUBTITLE */
+.sub-title {
+    text-align:center;
+    font-size:22px;
+    color:#475569;
+    margin-bottom:25px;
+}
+
+/* FEATURE BOX */
+.feature-box {
+    background: white;
+    padding:18px;
+    border-radius:15px;
+    text-align:center;
+    font-weight:600;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+}
+
+.feature-box:hover {
+    transform: scale(1.05);
 }
 
 .card {
@@ -75,8 +94,26 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 # ---------------- HEADER ----------------
-st.markdown('<p class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</p>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">AI Powered Human Activity Recognition using Radar Micro-Doppler Spectrograms</div>', unsafe_allow_html=True)
+
+# ---------------- FEATURE SECTION ----------------
+colf1, colf2, colf3, colf4 = st.columns(4)
+
+with colf1:
+    st.markdown('<div class="feature-box">📡 Real-Time Activity Detection</div>', unsafe_allow_html=True)
+
+with colf2:
+    st.markdown('<div class="feature-box">🧠 Deep Learning CNN Model</div>', unsafe_allow_html=True)
+
+with colf3:
+    st.markdown('<div class="feature-box">🚨 Automatic Risk Alert System</div>', unsafe_allow_html=True)
+
+with colf4:
+    st.markdown('<div class="feature-box">📊 Intelligent Surveillance Analytics</div>', unsafe_allow_html=True)
+
 st.write("")
+st.write("---")
 
 # ---------------- FILE UPLOAD ----------------
 uploaded_file = st.file_uploader(
@@ -191,4 +228,3 @@ if st.session_state.history:
 # ---------------- FOOTER ----------------
 st.write("---")
 st.caption("AI Radar Surveillance System | Final Year Deep Learning Project")
-
