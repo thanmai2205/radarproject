@@ -5,40 +5,54 @@ from PIL import Image
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
+from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Spacer
+import io
+import time
 
 # ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="Radar Intelligent Surveillance",
-    layout="wide"
-)
+st.set_page_config(page_title="Radar Intelligent Surveillance", layout="wide")
+
+# ---------------- DARK MODE TOGGLE ----------------
+dark_mode = st.sidebar.toggle("🌙 Dark Mode")
+
+if dark_mode:
+    bg_color = "#0f172a"
+    text_color = "white"
+else:
+    bg_color = "linear-gradient(to right, #eef2ff, #f8fafc)"
+    text_color = "#1e293b"
 
 # ---------------- CUSTOM CSS ----------------
-st.markdown("""
+st.markdown(f"""
 <style>
 
-.stApp {
-    background: linear-gradient(to right, #eef2ff, #f8fafc);
-}
+.stApp {{
+    background: {bg_color};
+}}
 
-/* BIG ATTRACTIVE TITLE */
-.main-title {
+.main-title {{
     text-align:center;
     font-size:70px;
     font-weight:900;
-    color:#1e293b;
-    letter-spacing:1px;
-}
+    color:{text_color};
+    animation: glow 2s infinite alternate;
+}}
 
-/* SUBTITLE */
-.sub-title {
-    text-align:center;
-    font-size:22px;
-    color:#475569;
-    margin-bottom:25px;
-}
+@keyframes glow {{
+    from {{ text-shadow: 0 0 10px #6366f1; }}
+    to {{ text-shadow: 0 0 25px #3b82f6; }}
+}}
 
-/* FEATURE BOX */
-.feature-box {
+.feature-box {{
     background: white;
     padding:18px;
     border-radius:15px;
@@ -46,26 +60,21 @@ st.markdown("""
     font-weight:600;
     box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
     transition: transform 0.3s ease;
-}
+}}
 
-.feature-box:hover {
+.feature-box:hover {{
     transform: scale(1.05);
-}
+}}
 
-.card {
+.card {{
     padding:25px;
     border-radius:18px;
-    background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(12px);
-    box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
-}
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+    box-shadow: 0px 6px 18px rgba(0,0,0,0.1);
+}}
 
-.card:hover {
-    transform: scale(1.02);
-}
-
-.alert-box {
+.alert-box {{
     padding:25px;
     border-radius:16px;
     background-color:#ffccd5;
@@ -74,76 +83,63 @@ st.markdown("""
     font-size:22px;
     text-align:center;
     animation: pulse 1s infinite;
-}
+}}
 
-@keyframes pulse {
-    0% {box-shadow:0 0 0 0 rgba(255,0,0,0.5);}
-    70% {box-shadow:0 0 0 20px rgba(255,0,0,0);}
-    100% {box-shadow:0 0 0 0 rgba(255,0,0,0);}
-}
+@keyframes pulse {{
+    0% {{box-shadow:0 0 0 0 rgba(255,0,0,0.5);}}
+    70% {{box-shadow:0 0 0 20px rgba(255,0,0,0);}}
+    100% {{box-shadow:0 0 0 0 rgba(255,0,0,0);}}
+}}
 
 </style>
 """, unsafe_allow_html=True)
+
+# ---------------- HEADER ----------------
+st.markdown('<div class="main-title">🚀 Radar Intelligent Surveillance System</div>', unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ---------------- FEATURE BOXES ----------------
+colf1, colf2, colf3, colf4 = st.columns(4)
+
+with colf1:
+    st.markdown('<div class="feature-box">📡 Activity Recognition</div>', unsafe_allow_html=True)
+
+with colf2:
+    st.markdown('<div class="feature-box">🚨 Smart Risk Detection</div>', unsafe_allow_html=True)
+
+with colf3:
+    st.markdown('<div class="feature-box">📊 Analytics Dashboard</div>', unsafe_allow_html=True)
+
+with colf4:
+    st.markdown('<div class="feature-box">☁ Cloud Deployment</div>', unsafe_allow_html=True)
+
+st.write("---")
 
 # ---------------- LOAD MODEL ----------------
 model = tf.keras.models.load_model("radar_model.keras")
 class_names = ['falling','sitting','walking']
 
-# ---------------- SESSION STORAGE ----------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# ---------------- HEADER ----------------
-st.markdown('<div class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">AI Powered Human Activity Recognition using Radar Micro-Doppler Spectrograms</div>', unsafe_allow_html=True)
+# ---------------- REAL TIME MONITOR MODE ----------------
+realtime_mode = st.sidebar.checkbox("🔴 Real-Time Monitoring Mode")
 
-# ---------------- FEATURE SECTION ----------------
-colf1, colf2, colf3, colf4 = st.columns(4)
+uploaded_file = st.file_uploader("Upload Radar Spectrogram", type=["png","jpg","jpeg"])
 
-with colf1:
-    st.markdown('<div class="feature-box">📡 Real-Time Activity Detection</div>', unsafe_allow_html=True)
-
-with colf2:
-    st.markdown('<div class="feature-box">🧠 Deep Learning CNN Model</div>', unsafe_allow_html=True)
-
-with colf3:
-    st.markdown('<div class="feature-box">🚨 Automatic Risk Alert System</div>', unsafe_allow_html=True)
-
-with colf4:
-    st.markdown('<div class="feature-box">📊 Intelligent Surveillance Analytics</div>', unsafe_allow_html=True)
-
-st.write("")
-st.write("---")
-
-# ---------------- FILE UPLOAD ----------------
-uploaded_file = st.file_uploader(
-    "📡 Upload Radar Spectrogram",
-    type=["png","jpg","jpeg"]
-)
-
-# ---------------- PROCESS IMAGE ----------------
 if uploaded_file:
 
-    col1, col2 = st.columns([1,1])
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, use_container_width=True)
 
-    # IMAGE CARD
-    with col1:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # Preprocess
-    img = image.resize((160,160))
+    img = image.resize((128,128))
     img_array = np.array(img)/255.0
     img_array = np.expand_dims(img_array, axis=0)
 
     prediction = model.predict(img_array)
-
     predicted_class = class_names[np.argmax(prediction)]
     confidence = float(np.max(prediction))
 
-    # Risk Logic
     if predicted_class == "falling":
         risk = "HIGH"
         color = "red"
@@ -156,75 +152,62 @@ if uploaded_file:
 
     st.session_state.history.append(predicted_class)
 
-    # DASHBOARD CARD
-    with col2:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.metric("Predicted Activity", predicted_class.upper())
+    st.metric("Confidence Score", f"{confidence*100:.2f}%")
+    st.metric("Risk Level", risk)
 
-        st.subheader("📊 Prediction Summary")
+    # Gauge
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=confidence*100,
+        gauge={'axis': {'range': [0,100]}, 'bar': {'color': color}},
+        title={'text': "Confidence Meter"}
+    ))
+    st.plotly_chart(fig, use_container_width=True)
 
-        st.metric("Predicted Activity", predicted_class.upper())
-        st.metric("Confidence Score", f"{confidence*100:.2f}%")
-        st.metric("Risk Level", risk)
+    # ALERT
+    if risk == "HIGH" and confidence > 0.5:
+        st.markdown('<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>', unsafe_allow_html=True)
 
-        # -------- CONFIDENCE GAUGE --------
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=confidence*100,
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': color},
-            },
-            title={'text': "Confidence Meter"}
-        ))
+# ---------------- ADMIN DASHBOARD ----------------
+if st.sidebar.checkbox("🛠 Admin Analytics Dashboard"):
 
-        st.plotly_chart(fig, use_container_width=True)
+    st.header("Admin Activity Monitoring Panel")
 
-        # -------- AUTO ALERT --------
-        if predicted_class == "falling" and confidence > 0.75:
+    if st.session_state.history:
+        df = pd.DataFrame(st.session_state.history, columns=["Activity"])
 
-            st.markdown(
-                '<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
-                unsafe_allow_html=True
-            )
+        fig1 = px.pie(df, names="Activity", title="Activity Distribution")
+        st.plotly_chart(fig1, use_container_width=True)
 
-            # Auto-play alarm sound
-            alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
-
-            st.markdown(f"""
-                <audio autoplay>
-                    <source src="{alarm_url}" type="audio/ogg">
-                </audio>
-            """, unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ---------------- ANALYTICS ----------------
-if st.session_state.history:
-
-    st.write("")
-    st.header("📈 Intelligent Surveillance Analytics")
-
-    history_df = pd.DataFrame(st.session_state.history, columns=["Activity"])
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-        fig = px.pie(
-            history_df,
-            names="Activity",
-            title="Activity Distribution"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col4:
-        fig2 = px.histogram(
-            history_df,
-            x="Activity",
-            color="Activity",
-            title="Detected Activity Count"
-        )
+        fig2 = px.histogram(df, x="Activity", color="Activity", title="Activity Frequency")
         st.plotly_chart(fig2, use_container_width=True)
+
+        st.dataframe(df)
+
+# ---------------- PDF REPORT ----------------
+if st.button("📄 Download PDF Report"):
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph("Radar Surveillance Report", styles["Title"]))
+    elements.append(Spacer(1, 0.5 * inch))
+    elements.append(Paragraph(f"Last Detected Activity: {predicted_class}", styles["Normal"]))
+    elements.append(Paragraph(f"Confidence: {confidence*100:.2f}%", styles["Normal"]))
+    elements.append(Paragraph(f"Risk Level: {risk}", styles["Normal"]))
+
+    doc.build(elements)
+
+    st.download_button(
+        label="Click to Download",
+        data=buffer.getvalue(),
+        file_name="Radar_Report.pdf",
+        mime="application/pdf"
+    )
 
 # ---------------- FOOTER ----------------
 st.write("---")
-st.caption("AI Radar Surveillance System | Final Year Deep Learning Project")
+st.caption("AI Radar Surveillance | Advanced Deep Learning Project")
