@@ -20,17 +20,36 @@ st.markdown("""
     background: linear-gradient(to right, #eef2ff, #f8fafc);
 }
 
+/* BIG ATTRACTIVE TITLE */
 .main-title {
     text-align:center;
-    font-size:50px;
-    font-weight:800;
-    color:#2b2d42;
-    animation: fadeIn 1.5s ease-in;
+    font-size:70px;
+    font-weight:900;
+    color:#1e293b;
+    letter-spacing:1px;
 }
 
-@keyframes fadeIn {
-    from {opacity:0;}
-    to {opacity:1;}
+/* SUBTITLE */
+.sub-title {
+    text-align:center;
+    font-size:22px;
+    color:#475569;
+    margin-bottom:25px;
+}
+
+/* FEATURE BOX */
+.feature-box {
+    background: white;
+    padding:18px;
+    border-radius:15px;
+    text-align:center;
+    font-weight:600;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+}
+
+.feature-box:hover {
+    transform: scale(1.05);
 }
 
 .card {
@@ -70,12 +89,31 @@ st.markdown("""
 model = tf.keras.models.load_model("radar_model.keras")
 class_names = ['falling','sitting','walking']
 
+# ---------------- SESSION STORAGE ----------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
 # ---------------- HEADER ----------------
-st.markdown('<p class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</p>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">AI Powered Human Activity Recognition using Radar Micro-Doppler Spectrograms</div>', unsafe_allow_html=True)
+
+# ---------------- FEATURE SECTION ----------------
+colf1, colf2, colf3, colf4 = st.columns(4)
+
+with colf1:
+    st.markdown('<div class="feature-box">📡 Real-Time Activity Detection</div>', unsafe_allow_html=True)
+
+with colf2:
+    st.markdown('<div class="feature-box">🧠 Deep Learning CNN Model</div>', unsafe_allow_html=True)
+
+with colf3:
+    st.markdown('<div class="feature-box">🚨 Automatic Risk Alert System</div>', unsafe_allow_html=True)
+
+with colf4:
+    st.markdown('<div class="feature-box">📊 Intelligent Surveillance Analytics</div>', unsafe_allow_html=True)
+
 st.write("")
+st.write("---")
 
 # ---------------- FILE UPLOAD ----------------
 uploaded_file = st.file_uploader(
@@ -88,14 +126,15 @@ if uploaded_file:
 
     col1, col2 = st.columns([1,1])
 
+    # IMAGE CARD
     with col1:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 🔹 FIXED IMAGE SIZE (MATCH TRAINING SIZE)
-    img = image.resize((128,128))  # change if your model used different size
+    # Preprocess (Keep same size used during training)
+    img = image.resize((160,160))
     img_array = np.array(img)/255.0
     img_array = np.expand_dims(img_array, axis=0)
 
@@ -104,7 +143,7 @@ if uploaded_file:
     predicted_class = class_names[np.argmax(prediction)]
     confidence = float(np.max(prediction))
 
-    # 🔹 FIXED RISK LOGIC
+    # ---------------- UPDATED RISK LOGIC ----------------
     if predicted_class == "falling" and confidence > 0.75:
         risk = "HIGH"
         color = "red"
@@ -127,6 +166,7 @@ if uploaded_file:
 
     st.session_state.history.append(predicted_class)
 
+    # DASHBOARD CARD
     with col2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
@@ -136,7 +176,7 @@ if uploaded_file:
         st.metric("Confidence Score", f"{confidence*100:.2f}%")
         st.metric("Risk Level", risk)
 
-        # 🔹 SHOW ALL CLASS PROBABILITIES
+        # -------- SHOW CLASS PROBABILITIES --------
         st.subheader("🔎 Class Probabilities")
         for i, class_name in enumerate(class_names):
             st.write(f"{class_name}: {prediction[0][i]*100:.2f}%")
@@ -154,12 +194,21 @@ if uploaded_file:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # 🔹 ALERT ONLY IF TRUE HIGH
+        # -------- AUTO ALERT ONLY IF TRUE HIGH --------
         if risk == "HIGH":
+
             st.markdown(
                 '<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
                 unsafe_allow_html=True
             )
+
+            alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+
+            st.markdown(f"""
+                <audio autoplay>
+                    <source src="{alarm_url}" type="audio/ogg">
+                </audio>
+            """, unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
