@@ -12,232 +12,178 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- CUSTOM CSS ----------------
-st.markdown("""
-<style>
-
-.stApp {
-    background: linear-gradient(to right, #eef2ff, #f8fafc);
-}
-
-/* BIG ATTRACTIVE TITLE */
-.main-title {
-    text-align:center;
-    font-size:70px;
-    font-weight:900;
-    color:#1e293b;
-    letter-spacing:1px;
-}
-
-/* SUBTITLE */
-.sub-title {
-    text-align:center;
-    font-size:22px;
-    color:#475569;
-    margin-bottom:25px;
-}
-
-/* FEATURE BOX */
-.feature-box {
-    background: white;
-    padding:18px;
-    border-radius:15px;
-    text-align:center;
-    font-weight:600;
-    box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
-}
-
-.feature-box:hover {
-    transform: scale(1.05);
-}
-
-.card {
-    padding:25px;
-    border-radius:18px;
-    background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(12px);
-    box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
-}
-
-.card:hover {
-    transform: scale(1.02);
-}
-
-.alert-box {
-    padding:25px;
-    border-radius:16px;
-    background-color:#ffccd5;
-    color:#b00020;
-    font-weight:800;
-    font-size:22px;
-    text-align:center;
-    animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-    0% {box-shadow:0 0 0 0 rgba(255,0,0,0.5);}
-    70% {box-shadow:0 0 0 20px rgba(255,0,0,0);}
-    100% {box-shadow:0 0 0 0 rgba(255,0,0,0);}
-}
-
-</style>
-""", unsafe_allow_html=True)
+# ---------------- SIDEBAR ----------------
+st.sidebar.title("📌 Navigation")
+page = st.sidebar.radio(
+    "Go to",
+    ["🏠 Home", "ℹ️ About Us", "🔐 Login"]
+)
 
 # ---------------- LOAD MODEL ----------------
-model = tf.keras.models.load_model("radar_model.keras")
+@st.cache_resource
+def load_model():
+    return tf.keras.models.load_model("radar_model.keras")
+
+model = load_model()
 class_names = ['falling','sitting','walking']
 
-# ---------------- SESSION STORAGE ----------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# ---------------- HEADER ----------------
-st.markdown('<div class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">AI Powered Human Activity Recognition using Radar Micro-Doppler Spectrograms</div>', unsafe_allow_html=True)
+# =========================================================
+# 🏠 HOME PAGE
+# =========================================================
+if page == "🏠 Home":
 
-# ---------------- FEATURE SECTION ----------------
-colf1, colf2, colf3, colf4 = st.columns(4)
+    st.markdown("""
+    <h1 style='text-align:center;
+    font-size:60px;
+    font-weight:900;
+    color:#1e293b;'>
+    🚀 Radar-Based Intelligent Surveillance Dashboard
+    </h1>
+    """, unsafe_allow_html=True)
 
-with colf1:
-    st.markdown('<div class="feature-box">📡 Real-Time Activity Detection</div>', unsafe_allow_html=True)
+    st.write("---")
 
-with colf2:
-    st.markdown('<div class="feature-box">🧠 Deep Learning CNN Model</div>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader(
+        "📡 Upload Radar Spectrogram",
+        type=["png","jpg","jpeg"]
+    )
 
-with colf3:
-    st.markdown('<div class="feature-box">🚨 Automatic Risk Alert System</div>', unsafe_allow_html=True)
+    if uploaded_file:
 
-with colf4:
-    st.markdown('<div class="feature-box">📊 Intelligent Surveillance Analytics</div>', unsafe_allow_html=True)
+        col1, col2 = st.columns([1,1])
 
-st.write("")
-st.write("---")
+        with col1:
+            image = Image.open(uploaded_file).convert("RGB")
+            st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
 
-# ---------------- FILE UPLOAD ----------------
-uploaded_file = st.file_uploader(
-    "📡 Upload Radar Spectrogram",
-    type=["png","jpg","jpeg"]
-)
+        img = image.resize((160,160))
+        img_array = np.array(img)/255.0
+        img_array = np.expand_dims(img_array, axis=0)
 
-# ---------------- PROCESS IMAGE ----------------
-if uploaded_file:
+        prediction = model.predict(img_array)
+        predicted_class = class_names[np.argmax(prediction)]
+        confidence = float(np.max(prediction))
 
-    col1, col2 = st.columns([1,1])
+        # -------- Risk Logic --------
+        if predicted_class == "falling" and confidence > 0.75:
+            risk = "HIGH"
+            color = "red"
+        elif predicted_class == "falling" and confidence > 0.50:
+            risk = "MEDIUM (Uncertain)"
+            color = "orange"
+        elif confidence < 0.50:
+            risk = "LOW CONFIDENCE"
+            color = "gray"
+        elif predicted_class == "sitting":
+            risk = "MEDIUM"
+            color = "orange"
+        else:
+            risk = "LOW"
+            color = "green"
 
-    # IMAGE CARD
-    with col1:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        image = Image.open(uploaded_file).convert("RGB")
-        st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.session_state.history.append(predicted_class)
 
-    # Preprocess (Keep same size used during training)
-    img = image.resize((160,160))
-    img_array = np.array(img)/255.0
-    img_array = np.expand_dims(img_array, axis=0)
+        with col2:
+            st.subheader("📊 Prediction Summary")
+            st.metric("Predicted Activity", predicted_class.upper())
+            st.metric("Confidence Score", f"{confidence*100:.2f}%")
+            st.metric("Risk Level", risk)
 
-    prediction = model.predict(img_array)
+            st.subheader("🔎 Class Probabilities")
+            for i, class_name in enumerate(class_names):
+                st.write(f"{class_name}: {prediction[0][i]*100:.2f}%")
 
-    predicted_class = class_names[np.argmax(prediction)]
-    confidence = float(np.max(prediction))
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=confidence*100,
+                gauge={
+                    'axis': {'range': [0, 100]},
+                    'bar': {'color': color},
+                },
+                title={'text': "Confidence Meter"}
+            ))
+            st.plotly_chart(fig, use_container_width=True)
 
-    # ---------------- UPDATED RISK LOGIC ----------------
-    if predicted_class == "falling" and confidence > 0.75:
-        risk = "HIGH"
-        color = "red"
+            if risk == "HIGH":
+                st.error("🚨 HIGH RISK ACTIVITY DETECTED!")
 
-    elif predicted_class == "falling" and confidence > 0.50:
-        risk = "MEDIUM (Uncertain)"
-        color = "orange"
+    # -------- Analytics --------
+    if st.session_state.history:
+        st.write("---")
+        st.header("📈 Intelligent Surveillance Analytics")
 
-    elif confidence < 0.50:
-        risk = "LOW CONFIDENCE"
-        color = "gray"
+        history_df = pd.DataFrame(st.session_state.history, columns=["Activity"])
 
-    elif predicted_class == "sitting":
-        risk = "MEDIUM"
-        color = "orange"
+        col3, col4 = st.columns(2)
 
-    else:
-        risk = "LOW"
-        color = "green"
-
-    st.session_state.history.append(predicted_class)
-
-    # DASHBOARD CARD
-    with col2:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-
-        st.subheader("📊 Prediction Summary")
-
-        st.metric("Predicted Activity", predicted_class.upper())
-        st.metric("Confidence Score", f"{confidence*100:.2f}%")
-        st.metric("Risk Level", risk)
-
-        # -------- SHOW CLASS PROBABILITIES --------
-        st.subheader("🔎 Class Probabilities")
-        for i, class_name in enumerate(class_names):
-            st.write(f"{class_name}: {prediction[0][i]*100:.2f}%")
-
-        # -------- CONFIDENCE GAUGE --------
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=confidence*100,
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': color},
-            },
-            title={'text': "Confidence Meter"}
-        ))
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # -------- AUTO ALERT ONLY IF TRUE HIGH --------
-        if risk == "HIGH":
-
-            st.markdown(
-                '<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
-                unsafe_allow_html=True
+        with col3:
+            fig = px.pie(
+                history_df,
+                names="Activity",
+                title="Activity Distribution"
             )
+            st.plotly_chart(fig, use_container_width=True)
 
-            alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+        with col4:
+            fig2 = px.histogram(
+                history_df,
+                x="Activity",
+                color="Activity",
+                title="Detected Activity Count"
+            )
+            st.plotly_chart(fig2, use_container_width=True)
 
-            st.markdown(f"""
-                <audio autoplay>
-                    <source src="{alarm_url}" type="audio/ogg">
-                </audio>
-            """, unsafe_allow_html=True)
+# =========================================================
+# ℹ️ ABOUT US PAGE
+# =========================================================
+elif page == "ℹ️ About Us":
 
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.title("ℹ️ About This Project")
 
-# ---------------- ANALYTICS ----------------
-if st.session_state.history:
+    st.write("""
+    ### 📌 Project Title:
+    Radar-Based Human Activity Recognition for Intelligent Surveillance Systems
 
-    st.write("")
-    st.header("📈 Intelligent Surveillance Analytics")
+    ### 🎯 Objective:
+    To develop a deep learning-based radar surveillance system capable of:
+    - Detecting human activities
+    - Identifying abnormal events like falls
+    - Providing confidence-based risk alerts
 
-    history_df = pd.DataFrame(st.session_state.history, columns=["Activity"])
+    ### 🧠 Technologies Used:
+    - TensorFlow & Keras
+    - CNN Architecture
+    - Streamlit Deployment
+    - Plotly Visualization
 
-    col3, col4 = st.columns(2)
+    ### 🚀 Applications:
+    - Elderly fall detection
+    - Defense monitoring
+    - Smart home security
+    - Healthcare monitoring
 
-    with col3:
-        fig = px.pie(
-            history_df,
-            names="Activity",
-            title="Activity Distribution"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    This system ensures privacy by using radar micro-Doppler signals instead of cameras.
+    """)
 
-    with col4:
-        fig2 = px.histogram(
-            history_df,
-            x="Activity",
-            color="Activity",
-            title="Detected Activity Count"
-        )
-        st.plotly_chart(fig2, use_container_width=True)
+# =========================================================
+# 🔐 LOGIN PAGE
+# =========================================================
+elif page == "🔐 Login":
+
+    st.title("🔐 Admin Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if username == "admin" and password == "radar123":
+            st.success("✅ Login Successful")
+            st.info("Welcome to Admin Dashboard")
+        else:
+            st.error("❌ Invalid Credentials")
 
 # ---------------- FOOTER ----------------
 st.write("---")
