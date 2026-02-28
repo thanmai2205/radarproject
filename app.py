@@ -22,23 +22,28 @@ st.markdown("""
 
 .main-title {
     text-align:center;
-    font-size:70px;
-    font-weight:900;
-    color:#1e293b;
-    animation: glow 2s infinite alternate;
+    font-size:50px;
+    font-weight:800;
+    color:#2b2d42;
+    animation: fadeIn 1.5s ease-in;
 }
 
-@keyframes glow {
-    from { text-shadow: 0 0 10px #6366f1; }
-    to { text-shadow: 0 0 25px #3b82f6; }
+@keyframes fadeIn {
+    from {opacity:0;}
+    to {opacity:1;}
 }
 
 .card {
     padding:25px;
     border-radius:18px;
-    background: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.75);
     backdrop-filter: blur(12px);
     box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: scale(1.02);
 }
 
 .alert-box {
@@ -69,7 +74,7 @@ if "history" not in st.session_state:
     st.session_state.history = []
 
 # ---------------- HEADER ----------------
-st.markdown('<div class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<p class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</p>', unsafe_allow_html=True)
 st.write("")
 
 # ---------------- FILE UPLOAD ----------------
@@ -83,15 +88,14 @@ if uploaded_file:
 
     col1, col2 = st.columns([1,1])
 
-    # IMAGE CARD
     with col1:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Preprocess
-    img = image.resize((128,128))   # MATCH TRAINING SIZE
+    # 🔹 FIXED IMAGE SIZE (MATCH TRAINING SIZE)
+    img = image.resize((128,128))  # change if your model used different size
     img_array = np.array(img)/255.0
     img_array = np.expand_dims(img_array, axis=0)
 
@@ -100,7 +104,29 @@ if uploaded_file:
     predicted_class = class_names[np.argmax(prediction)]
     confidence = float(np.max(prediction))
 
-    # ---------------- SHOW FULL PROBABILITIES ----------------
+    # 🔹 FIXED RISK LOGIC
+    if predicted_class == "falling" and confidence > 0.75:
+        risk = "HIGH"
+        color = "red"
+
+    elif predicted_class == "falling" and confidence > 0.50:
+        risk = "MEDIUM (Uncertain)"
+        color = "orange"
+
+    elif confidence < 0.50:
+        risk = "LOW CONFIDENCE"
+        color = "gray"
+
+    elif predicted_class == "sitting":
+        risk = "MEDIUM"
+        color = "orange"
+
+    else:
+        risk = "LOW"
+        color = "green"
+
+    st.session_state.history.append(predicted_class)
+
     with col2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
@@ -108,33 +134,12 @@ if uploaded_file:
 
         st.metric("Predicted Activity", predicted_class.upper())
         st.metric("Confidence Score", f"{confidence*100:.2f}%")
+        st.metric("Risk Level", risk)
 
+        # 🔹 SHOW ALL CLASS PROBABILITIES
         st.subheader("🔎 Class Probabilities")
         for i, class_name in enumerate(class_names):
             st.write(f"{class_name}: {prediction[0][i]*100:.2f}%")
-
-        # ---------------- FIXED RISK LOGIC ----------------
-        if predicted_class == "falling" and confidence > 0.75:
-            risk = "HIGH"
-            color = "red"
-
-        elif predicted_class == "falling" and confidence > 0.50:
-            risk = "MEDIUM (Uncertain)"
-            color = "orange"
-
-        elif confidence < 0.50:
-            risk = "LOW CONFIDENCE"
-            color = "gray"
-
-        elif predicted_class == "sitting":
-            risk = "MEDIUM"
-            color = "orange"
-
-        else:
-            risk = "LOW"
-            color = "green"
-
-        st.metric("Risk Level", risk)
 
         # -------- CONFIDENCE GAUGE --------
         fig = go.Figure(go.Indicator(
@@ -149,7 +154,7 @@ if uploaded_file:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # -------- ALERT ONLY WHEN REAL HIGH --------
+        # 🔹 ALERT ONLY IF TRUE HIGH
         if risk == "HIGH":
             st.markdown(
                 '<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
@@ -157,8 +162,6 @@ if uploaded_file:
             )
 
         st.markdown('</div>', unsafe_allow_html=True)
-
-    st.session_state.history.append(predicted_class)
 
 # ---------------- ANALYTICS ----------------
 if st.session_state.history:
