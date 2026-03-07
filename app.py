@@ -133,28 +133,25 @@ if uploaded_file:
         st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Preprocess (Keep same size used during training)
+    # Preprocess
     img = image.resize((160,160))
-    img_array = np.array(img)/255.0
+    img_array = np.array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
     prediction = model.predict(img_array)
 
-    predicted_class = class_names[np.argmax(prediction)]
     confidence = float(np.max(prediction))
+    predicted_class = class_names[np.argmax(prediction)]
 
-    # ---------------- UPDATED RISK LOGIC ----------------
-    if predicted_class == "falling" and confidence > 0.75:
-        risk = "HIGH"
-        color = "red"
-
-    elif predicted_class == "falling" and confidence > 0.50:
-        risk = "MEDIUM (Uncertain)"
-        color = "orange"
-
-    elif confidence < 0.50:
+    # ---------------- IMPROVED PREDICTION LOGIC ----------------
+    if confidence < 0.50:
+        predicted_class = "UNKNOWN ACTIVITY"
         risk = "LOW CONFIDENCE"
         color = "gray"
+
+    elif predicted_class == "falling":
+        risk = "HIGH"
+        color = "red"
 
     elif predicted_class == "sitting":
         risk = "MEDIUM"
@@ -172,14 +169,16 @@ if uploaded_file:
 
         st.subheader("📊 Prediction Summary")
 
-        st.metric("Predicted Activity", predicted_class.upper())
+        st.metric("Predicted Activity", predicted_class)
         st.metric("Confidence Score", f"{confidence*100:.2f}%")
         st.metric("Risk Level", risk)
 
-        # -------- SHOW CLASS PROBABILITIES --------
+        # -------- CLASS PROBABILITIES --------
         st.subheader("🔎 Class Probabilities")
+
         for i, class_name in enumerate(class_names):
-            st.write(f"{class_name}: {prediction[0][i]*100:.2f}%")
+            prob = prediction[0][i] * 100
+            st.write(f"{class_name}: {prob:.2f}%")
 
         # -------- CONFIDENCE GAUGE --------
         fig = go.Figure(go.Indicator(
@@ -194,7 +193,7 @@ if uploaded_file:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # -------- AUTO ALERT ONLY IF TRUE HIGH --------
+        # -------- ALERT ONLY IF HIGH --------
         if risk == "HIGH":
 
             st.markdown(
