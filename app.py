@@ -1,243 +1,196 @@
 import streamlit as st
-import tensorflow as tf
 import numpy as np
-from PIL import Image
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import datetime
+from PIL import Image
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import load_model
 
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="Radar Intelligent Surveillance",
-    layout="wide"
-)
+# ------------------------------
+# Load Model
+# ------------------------------
 
-# ---------------- CUSTOM CSS ----------------
-st.markdown("""
-<style>
+model = load_model("model.h5")
 
-.stApp {
-    background: linear-gradient(to right, #eef2ff, #f8fafc);
-}
+class_names = ["walking", "sitting", "standing", "fall"]
 
-/* BIG ATTRACTIVE TITLE */
-.main-title {
-    text-align:center;
-    font-size:70px;
-    font-weight:900;
-    color:#1e293b;
-    letter-spacing:1px;
-}
+# ------------------------------
+# Streamlit Page Config
+# ------------------------------
 
-/* SUBTITLE */
-.sub-title {
-    text-align:center;
-    font-size:22px;
-    color:#475569;
-    margin-bottom:25px;
-}
+st.set_page_config(page_title="Radar HAR System", layout="wide")
 
-/* FEATURE BOX */
-.feature-box {
-    background: white;
-    padding:18px;
-    border-radius:15px;
-    text-align:center;
-    font-weight:600;
-    box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
-}
+st.title("Radar-Based Human Activity Recognition System")
 
-.feature-box:hover {
-    transform: scale(1.05);
-}
+# ------------------------------
+# Session State for Activity Log
+# ------------------------------
 
-.card {
-    padding:25px;
-    border-radius:18px;
-    background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(12px);
-    box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
-}
+if "activity_log" not in st.session_state:
+    st.session_state.activity_log = {}
 
-.card:hover {
-    transform: scale(1.02);
-}
+# ------------------------------
+# Project Overview
+# ------------------------------
 
-.alert-box {
-    padding:25px;
-    border-radius:16px;
-    background-color:#ffccd5;
-    color:#b00020;
-    font-weight:800;
-    font-size:22px;
-    text-align:center;
-    animation: pulse 1s infinite;
-}
+st.header("Project Overview")
 
-@keyframes pulse {
-    0% {box-shadow:0 0 0 0 rgba(255,0,0,0.5);}
-    70% {box-shadow:0 0 0 20px rgba(255,0,0,0);}
-    100% {box-shadow:0 0 0 0 rgba(255,0,0,0);}
-}
+st.write("""
+This system uses radar micro-Doppler spectrograms and deep learning models
+to recognize human activities in indoor environments.
 
-</style>
-""", unsafe_allow_html=True)
+The system also detects abnormal events such as falls and provides
+confidence-based predictions for intelligent indoor monitoring systems.
+""")
 
-# ---------------- LOAD MODEL ----------------
-model = tf.keras.models.load_model("radar_model.keras")
-class_names = ['falling','sitting','walking']
+# ------------------------------
+# System Architecture
+# ------------------------------
 
-# ---------------- SESSION STORAGE ----------------
-if "history" not in st.session_state:
-    st.session_state.history = []
+st.header("System Architecture")
 
-# ---------------- HEADER ----------------
-st.markdown('<div class="main-title">🚀 Radar-Based Intelligent Surveillance Dashboard</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">AI Powered Human Activity Recognition using Radar Micro-Doppler Spectrograms</div>', unsafe_allow_html=True)
+st.write("""
+Radar Signal → Spectrogram Generation → Deep Learning Model (CNN)
+→ Activity Classification → Abnormal Activity Detection → Alert System
+""")
 
-# ---------------- FEATURE SECTION ----------------
-colf1, colf2, colf3, colf4 = st.columns(4)
+# Optional architecture image
+# st.image("architecture.png")
 
-with colf1:
-    st.markdown('<div class="feature-box">📡 Real-Time Activity Detection</div>', unsafe_allow_html=True)
+# ------------------------------
+# Upload Spectrogram
+# ------------------------------
 
-with colf2:
-    st.markdown('<div class="feature-box">🧠 Deep Learning CNN Model</div>', unsafe_allow_html=True)
+st.header("Upload Radar Spectrogram")
 
-with colf3:
-    st.markdown('<div class="feature-box">🚨 Automatic Risk Alert System</div>', unsafe_allow_html=True)
-
-with colf4:
-    st.markdown('<div class="feature-box">📊 Intelligent Surveillance Analytics</div>', unsafe_allow_html=True)
-
-st.write("")
-st.write("---")
-
-# ---------------- FILE UPLOAD ----------------
 uploaded_file = st.file_uploader(
-    "📡 Upload Radar Spectrogram",
-    type=["png","jpg","jpeg"]
+    "Upload Spectrogram Image",
+    type=["jpg", "jpeg", "png"]
 )
 
-# ---------------- PROCESS IMAGE ----------------
+# ------------------------------
+# Prediction Section
+# ------------------------------
+
 if uploaded_file:
 
-    col1, col2 = st.columns([1,1])
+    image = Image.open(uploaded_file)
 
-    # IMAGE CARD
-    with col1:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        image = Image.open(uploaded_file).convert("RGB")
-        st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.image(image, caption="Uploaded Spectrogram", use_column_width=True)
 
-    # Preprocess
-    img = image.resize((160,160))
-    img_array = np.array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
+    # Preprocess image
+    img = image.resize((224, 224))
+    img = np.array(img) / 255.0
+    img = np.expand_dims(img, axis=0)
 
-    prediction = model.predict(img_array)
+    # Model prediction
+    prediction = model.predict(img)
 
+    label_index = np.argmax(prediction)
     confidence = float(np.max(prediction))
-    predicted_class = class_names[np.argmax(prediction)]
 
-    # ---------------- IMPROVED PREDICTION LOGIC ----------------
-    if confidence < 0.50:
-        predicted_class = "UNKNOWN ACTIVITY"
-        risk = "LOW CONFIDENCE"
-        color = "gray"
+    label = class_names[label_index]
 
-    elif predicted_class == "falling":
-        risk = "HIGH"
-        color = "red"
+    st.subheader("Prediction Result")
 
-    elif predicted_class == "sitting":
-        risk = "MEDIUM"
-        color = "orange"
+    st.write("Predicted Activity:", label)
+
+    st.write("Prediction Confidence:", round(confidence * 100, 2), "%")
+
+    # ------------------------------
+    # Abnormal Activity Detection
+    # ------------------------------
+
+    abnormal_classes = ["fall"]
+
+    if label.lower() in abnormal_classes:
+
+        st.error("⚠ Abnormal Activity Detected")
+
+        st.write("Detection Time:", datetime.datetime.now())
 
     else:
-        risk = "LOW"
-        color = "green"
 
-    st.session_state.history.append(predicted_class)
+        st.success("Normal Activity")
 
-    # DASHBOARD CARD
-    with col2:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+    # ------------------------------
+    # Store Activity Log
+    # ------------------------------
 
-        st.subheader("📊 Prediction Summary")
+    if label in st.session_state.activity_log:
+        st.session_state.activity_log[label] += 1
+    else:
+        st.session_state.activity_log[label] = 1
 
-        st.metric("Predicted Activity", predicted_class)
-        st.metric("Confidence Score", f"{confidence*100:.2f}%")
-        st.metric("Risk Level", risk)
 
-        # -------- CLASS PROBABILITIES --------
-        st.subheader("🔎 Class Probabilities")
+# ------------------------------
+# Activity Analytics Dashboard
+# ------------------------------
 
-        for i, class_name in enumerate(class_names):
-            prob = prediction[0][i] * 100
-            st.write(f"{class_name}: {prob:.2f}%")
+st.header("Activity Analytics")
 
-        # -------- CONFIDENCE GAUGE --------
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=confidence*100,
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': color},
-            },
-            title={'text': "Confidence Meter"}
-        ))
+if st.session_state.activity_log:
 
-        st.plotly_chart(fig, use_container_width=True)
+    df = pd.DataFrame(
+        list(st.session_state.activity_log.items()),
+        columns=["Activity", "Count"]
+    )
 
-        # -------- ALERT ONLY IF HIGH --------
-        if risk == "HIGH":
+    st.bar_chart(df.set_index("Activity"))
 
-            st.markdown(
-                '<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
-                unsafe_allow_html=True
-            )
+else:
 
-            alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+    st.write("No activity data available yet.")
 
-            st.markdown(f"""
-                <audio autoplay>
-                    <source src="{alarm_url}" type="audio/ogg">
-                </audio>
-            """, unsafe_allow_html=True)
+# ------------------------------
+# Model Performance Section
+# ------------------------------
 
-        st.markdown('</div>', unsafe_allow_html=True)
+st.header("Model Information")
 
-# ---------------- ANALYTICS ----------------
-if st.session_state.history:
+st.write("Model Type: Convolutional Neural Network (CNN)")
 
-    st.write("")
-    st.header("📈 Intelligent Surveillance Analytics")
+st.write("Dataset Type: Radar Micro-Doppler Spectrogram")
 
-    history_df = pd.DataFrame(st.session_state.history, columns=["Activity"])
+st.write("Task: Human Activity Recognition")
 
-    col3, col4 = st.columns(2)
+# ------------------------------
+# Download Activity Report
+# ------------------------------
 
-    with col3:
-        fig = px.pie(
-            history_df,
-            names="Activity",
-            title="Activity Distribution"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+st.header("Download Activity Report")
 
-    with col4:
-        fig2 = px.histogram(
-            history_df,
-            x="Activity",
-            color="Activity",
-            title="Detected Activity Count"
-        )
-        st.plotly_chart(fig2, use_container_width=True)
+if st.session_state.activity_log:
 
-# ---------------- FOOTER ----------------
-st.write("---")
-st.caption("AI Radar Surveillance System | Final Year Deep Learning Project")
+    report_df = pd.DataFrame(
+        list(st.session_state.activity_log.items()),
+        columns=["Activity", "Count"]
+    )
+
+    csv = report_df.to_csv(index=False)
+
+    st.download_button(
+        label="Download Activity Report",
+        data=csv,
+        file_name="activity_report.csv",
+        mime="text/csv"
+    )
+
+# ------------------------------
+# Live Monitoring Simulation
+# ------------------------------
+
+st.header("Live Monitoring Simulation")
+
+if st.button("Start Monitoring"):
+    st.write("System is monitoring activities in real-time...")
+
+    st.info("Simulation Mode: Activities will be detected continuously.")
+
+# ------------------------------
+# Footer
+# ------------------------------
+
+st.markdown("---")
+
+st.write("Radar-Based Human Activity Recognition using Deep Learning")
