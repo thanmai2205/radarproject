@@ -20,16 +20,13 @@ st.markdown("""
     background: linear-gradient(to right, #eef2ff, #f8fafc);
 }
 
-/* BIG ATTRACTIVE TITLE */
 .main-title {
     text-align:center;
     font-size:70px;
     font-weight:900;
     color:#1e293b;
-    letter-spacing:1px;
 }
 
-/* SUBTITLE */
 .sub-title {
     text-align:center;
     font-size:22px;
@@ -37,7 +34,6 @@ st.markdown("""
     margin-bottom:25px;
 }
 
-/* FEATURE BOX */
 .feature-box {
     background: white;
     padding:18px;
@@ -45,11 +41,6 @@ st.markdown("""
     text-align:center;
     font-weight:600;
     box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
-}
-
-.feature-box:hover {
-    transform: scale(1.05);
 }
 
 .card {
@@ -58,11 +49,6 @@ st.markdown("""
     background: rgba(255,255,255,0.75);
     backdrop-filter: blur(12px);
     box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
-}
-
-.card:hover {
-    transform: scale(1.02);
 }
 
 .alert-box {
@@ -73,13 +59,6 @@ st.markdown("""
     font-weight:800;
     font-size:22px;
     text-align:center;
-    animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-    0% {box-shadow:0 0 0 0 rgba(255,0,0,0.5);}
-    70% {box-shadow:0 0 0 20px rgba(255,0,0,0);}
-    100% {box-shadow:0 0 0 0 rgba(255,0,0,0);}
 }
 
 </style>
@@ -112,7 +91,6 @@ with colf3:
 with colf4:
     st.markdown('<div class="feature-box">📊 Intelligent Surveillance Analytics</div>', unsafe_allow_html=True)
 
-st.write("")
 st.write("---")
 
 # ---------------- FILE UPLOAD ----------------
@@ -126,14 +104,14 @@ if uploaded_file:
 
     col1, col2 = st.columns([1,1])
 
-    # IMAGE CARD
+    # SHOW IMAGE
     with col1:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         image = Image.open(uploaded_file)
         st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Preprocess
+    # IMAGE PREPROCESS
     img = image.resize((160,160))
     img_array = np.array(img)/255.0
     img_array = np.expand_dims(img_array, axis=0)
@@ -141,10 +119,10 @@ if uploaded_file:
     prediction = model.predict(img_array)
 
     predicted_class = class_names[np.argmax(prediction)]
-    confidence = float(np.max(prediction))
+    confidence = float(np.max(prediction))*100
 
-    # Risk Logic
-    if predicted_class == "falling":
+    # ---------------- RISK LOGIC ----------------
+    if predicted_class == "falling" and confidence > 75:
         risk = "HIGH"
         color = "red"
     elif predicted_class == "sitting":
@@ -154,24 +132,29 @@ if uploaded_file:
         risk = "LOW"
         color = "green"
 
-    st.session_state.history.append(predicted_class)
+    # STORE HISTORY
+    st.session_state.history.append({
+        "Activity": predicted_class,
+        "Confidence": confidence
+    })
 
-    # DASHBOARD CARD
+    # ---------------- PREDICTION DASHBOARD ----------------
     with col2:
+
         st.markdown('<div class="card">', unsafe_allow_html=True)
 
         st.subheader("📊 Prediction Summary")
 
         st.metric("Predicted Activity", predicted_class.upper())
-        st.metric("Confidence Score", f"{confidence*100:.2f}%")
+        st.metric("Confidence Score", f"{confidence:.2f}%")
         st.metric("Risk Level", risk)
 
-        # -------- CONFIDENCE GAUGE --------
+        # CONFIDENCE GAUGE
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
-            value=confidence*100,
+            value=confidence,
             gauge={
-                'axis': {'range': [0, 100]},
+                'axis': {'range': [0,100]},
                 'bar': {'color': color},
             },
             title={'text': "Confidence Meter"}
@@ -179,20 +162,19 @@ if uploaded_file:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # -------- AUTO ALERT --------
-        if predicted_class == "falling" and confidence > 0.75:
+        # ALERT
+        if predicted_class == "falling" and confidence > 75:
 
             st.markdown(
                 '<div class="alert-box">🚨 HIGH RISK ACTIVITY DETECTED!</div>',
                 unsafe_allow_html=True
             )
 
-            # Auto-play alarm sound
             alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
 
             st.markdown(f"""
                 <audio autoplay>
-                    <source src="{alarm_url}" type="audio/ogg">
+                <source src="{alarm_url}" type="audio/ogg">
                 </audio>
             """, unsafe_allow_html=True)
 
@@ -201,28 +183,41 @@ if uploaded_file:
 # ---------------- ANALYTICS ----------------
 if st.session_state.history:
 
-    st.write("")
     st.header("📈 Intelligent Surveillance Analytics")
 
-    history_df = pd.DataFrame(st.session_state.history, columns=["Activity"])
+    history_df = pd.DataFrame(st.session_state.history)
+
+    st.metric("Total Detections", len(history_df))
 
     col3, col4 = st.columns(2)
 
+    # PIE CHART
     with col3:
+
+        activity_counts = history_df["Activity"].value_counts().reset_index()
+        activity_counts.columns = ["Activity","Count"]
+
         fig = px.pie(
-            history_df,
+            activity_counts,
             names="Activity",
-            title="Activity Distribution"
+            values="Count",
+            title="Activity Distribution",
+            hole=0.4
         )
+
         st.plotly_chart(fig, use_container_width=True)
 
+    # BAR CHART
     with col4:
-        fig2 = px.histogram(
+
+        fig2 = px.bar(
             history_df,
             x="Activity",
+            y="Confidence",
             color="Activity",
-            title="Detected Activity Count"
+            title="Confidence Score per Detection"
         )
+
         st.plotly_chart(fig2, use_container_width=True)
 
 # ---------------- FOOTER ----------------
