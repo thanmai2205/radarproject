@@ -22,7 +22,7 @@ st.markdown("""
 
 .main-title {
     text-align:center;
-    font-size:70px;
+    font-size:65px;
     font-weight:900;
     color:#1e293b;
 }
@@ -35,20 +35,19 @@ st.markdown("""
 }
 
 .feature-box {
-    background: white;
+    background:white;
     padding:18px;
     border-radius:15px;
     text-align:center;
     font-weight:600;
-    box-shadow: 0px 4px 15px rgba(0,0,0,0.08);
+    box-shadow:0px 4px 15px rgba(0,0,0,0.08);
 }
 
 .card {
     padding:25px;
     border-radius:18px;
-    background: rgba(255,255,255,0.75);
-    backdrop-filter: blur(12px);
-    box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
+    background:rgba(255,255,255,0.8);
+    box-shadow:0px 6px 18px rgba(0,0,0,0.08);
 }
 
 .alert-box {
@@ -111,7 +110,7 @@ if uploaded_file:
         st.image(image, caption="Uploaded Spectrogram", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # IMAGE PREPROCESS
+    # PREPROCESS IMAGE
     img = image.resize((160,160))
     img_array = np.array(img)/255.0
     img_array = np.expand_dims(img_array, axis=0)
@@ -173,49 +172,57 @@ if uploaded_file:
             alarm_url = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
 
             st.markdown(f"""
-                <audio autoplay>
-                <source src="{alarm_url}" type="audio/ogg">
-                </audio>
+            <audio autoplay>
+            <source src="{alarm_url}" type="audio/ogg">
+            </audio>
             """, unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- ANALYTICS ----------------
-if st.session_state.history:
+    # ---------------- ANALYTICS ----------------
 
     st.header("📈 Intelligent Surveillance Analytics")
 
-    history_df = pd.DataFrame(st.session_state.history)
-
-    st.metric("Total Detections", len(history_df))
+    st.metric("Total Detections", len(st.session_state.history))
 
     col3, col4 = st.columns(2)
 
-    # PIE CHART
+    # ---------------- PIE CHART ----------------
     with col3:
 
-        activity_counts = history_df["Activity"].value_counts().reset_index()
-        activity_counts.columns = ["Activity","Count"]
+        remaining = 100 - confidence
+
+        pie_df = pd.DataFrame({
+            "Label":[predicted_class, "Other Activities"],
+            "Value":[confidence, remaining]
+        })
 
         fig = px.pie(
-            activity_counts,
-            names="Activity",
-            values="Count",
-            title="Activity Distribution",
+            pie_df,
+            names="Label",
+            values="Value",
+            title="Prediction Confidence Distribution",
             hole=0.4
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
-    # BAR CHART
+    # ---------------- BAR CHART ----------------
     with col4:
 
+        scores = prediction[0]*100
+
+        score_df = pd.DataFrame({
+            "Activity": class_names,
+            "Confidence": scores
+        })
+
         fig2 = px.bar(
-            history_df,
+            score_df,
             x="Activity",
             y="Confidence",
             color="Activity",
-            title="Confidence Score per Detection"
+            title="Model Confidence for All Activities"
         )
 
         st.plotly_chart(fig2, use_container_width=True)
