@@ -73,61 +73,6 @@ if menu == "Dashboard":
     col2.metric("Model","CNN")
     col3.metric("Classes","3")
 
-    # ---------------- RADAR SIMULATION ----------------
-    import time
-    import math
-
-    st.subheader("📡 Live Radar Simulation")
-
-    radar_placeholder = st.empty()
-
-    radius = 1
-    num_points = 5
-
-    points = np.random.rand(num_points, 2) * 2 - 1
-
-    for angle in range(0, 360, 10):
-
-        theta = math.radians(angle)
-
-        fig = go.Figure()
-
-        # Radar circle
-        fig.add_shape(
-            type="circle",
-            x0=-1, y0=-1, x1=1, y1=1,
-            line=dict(color="green")
-        )
-
-        # Sweep line
-        fig.add_trace(go.Scatter(
-            x=[0, math.cos(theta)],
-            y=[0, math.sin(theta)],
-            mode="lines",
-            line=dict(color="lime", width=3)
-        ))
-
-        # Targets
-        fig.add_trace(go.Scatter(
-            x=points[:,0],
-            y=points[:,1],
-            mode="markers",
-            marker=dict(color="red", size=10)
-        ))
-
-        fig.update_layout(
-            showlegend=False,
-            xaxis=dict(range=[-1.2,1.2], visible=False),
-            yaxis=dict(range=[-1.2,1.2], visible=False),
-            plot_bgcolor="black",
-            paper_bgcolor="black",
-            height=400
-        )
-
-        radar_placeholder.plotly_chart(fig, use_container_width=True)
-
-        time.sleep(0.1)
-
 # ---------------- UPLOAD PAGE ----------------
 if menu == "Upload Spectrogram":
 
@@ -191,7 +136,7 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-            # ---------- BUZZER ----------
+            # ---------- BUZZER (FIXED AUTO PLAY) ----------
             if predicted_class == "falling" and confidence > 75:
 
                 st.error("🚨 HIGH RISK ACTIVITY DETECTED!")
@@ -207,6 +152,7 @@ if menu == "Upload Spectrogram":
 
         col3,col4 = st.columns(2)
 
+        # PIE CHART (Confidence distribution)
         with col3:
 
             remaining = 100 - confidence
@@ -226,6 +172,7 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
+        # BAR CHART (All class scores)
         with col4:
 
             score_df = pd.DataFrame({
