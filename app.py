@@ -5,6 +5,8 @@ from PIL import Image
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import cv2
+import time
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Radar Intelligent Surveillance", layout="wide")
@@ -50,7 +52,7 @@ st.sidebar.title("📡 Radar Control Panel")
 
 menu = st.sidebar.radio(
     "Navigation",
-    ["Dashboard","Upload Spectrogram","Detection History","System Info"]
+    ["Dashboard","Upload Spectrogram","Live Camera","Detection History","System Info"]
 )
 
 if st.sidebar.button("Reset History"):
@@ -90,7 +92,6 @@ if menu == "Upload Spectrogram":
         with col1:
             st.image(image,caption="Uploaded Spectrogram")
 
-        # ---------- PREPROCESS ----------
         img = image.resize((160,160))
         img = np.array(img)/255.0
         img = np.expand_dims(img,axis=0)
@@ -101,7 +102,6 @@ if menu == "Upload Spectrogram":
         predicted_class = class_names[np.argmax(scores)]
         confidence = float(np.max(scores))
 
-        # ---------- RISK ----------
         if predicted_class == "falling" and confidence > 75:
             risk = "HIGH"
             color = "red"
@@ -112,13 +112,11 @@ if menu == "Upload Spectrogram":
             risk = "LOW"
             color = "green"
 
-        # ---------- SAVE HISTORY ----------
         st.session_state.history.append({
             "Activity":predicted_class,
             "Confidence":confidence
         })
 
-        # ---------- RESULTS ----------
         with col2:
 
             st.subheader("Prediction Result")
@@ -136,7 +134,6 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-            # ---------- BUZZER (FIXED AUTO PLAY) ----------
             if predicted_class == "falling" and confidence > 75:
 
                 st.error("🚨 HIGH RISK ACTIVITY DETECTED!")
@@ -147,12 +144,10 @@ if menu == "Upload Spectrogram":
                 </audio>
                 """, unsafe_allow_html=True)
 
-        # ---------- ANALYTICS ----------
         st.subheader("Prediction Analytics")
 
         col3,col4 = st.columns(2)
 
-        # PIE CHART (Confidence distribution)
         with col3:
 
             remaining = 100 - confidence
@@ -172,7 +167,6 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-        # BAR CHART (All class scores)
         with col4:
 
             score_df = pd.DataFrame({
@@ -189,6 +183,66 @@ if menu == "Upload Spectrogram":
             )
 
             st.plotly_chart(fig2,use_container_width=True)
+
+# ---------------- LIVE CAMERA ----------------
+if menu == "Live Camera":
+
+    st.subheader("📷 Live AI Surveillance (Webcam)")
+
+    run = st.checkbox("Start Camera")
+
+    FRAME_WINDOW = st.image([])
+    status = st.empty()
+
+    cap = cv2.VideoCapture(0)
+
+    while run:
+
+        ret, frame = cap.read()
+
+        if not ret:
+            st.error("Camera not working")
+            break
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        FRAME_WINDOW.image(frame)
+
+        img = cv2.resize(frame, (160,160))
+        img = img / 255.0
+        img = np.expand_dims(img, axis=0)
+
+        prediction = model.predict(img)
+
+        scores = prediction[0]*100
+        predicted_class = class_names[np.argmax(scores)]
+        confidence = float(np.max(scores))
+
+        if predicted_class == "falling" and confidence > 75:
+            risk = "HIGH"
+        elif predicted_class == "sitting":
+            risk = "MEDIUM"
+        else:
+            risk = "LOW"
+
+        status.markdown(f"""
+        **Prediction:** {predicted_class.upper()}  
+        **Confidence:** {confidence:.2f}%  
+        **Risk Level:** {risk}
+        """)
+
+        if predicted_class == "falling" and confidence > 75:
+
+            st.error("🚨 FALL DETECTED (LIVE CAMERA)!")
+
+            st.markdown("""
+            <audio autoplay>
+            <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
+            </audio>
+            """, unsafe_allow_html=True)
+
+        time.sleep(0.2)
+
+    cap.release()
 
 # ---------------- DETECTION HISTORY ----------------
 if menu == "Detection History":
@@ -238,4 +292,4 @@ if menu == "System Info":
 
 # ---------------- FOOTER ----------------
 st.markdown("---")
-st.caption("AI Radar Surveillance System | Final Year Project")
+st.caption("AI Radar Surveillance System ")
