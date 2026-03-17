@@ -313,4 +313,4 @@ if menu == "System Info":
 
 # ---------------- FOOTER ----------------
 st.markdown("---")
-st.caption("AI Radar Surveillance System | Final Year Project")
+st.caption("AI Radar Surveillance System ")
