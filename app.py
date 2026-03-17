@@ -73,6 +73,83 @@ if menu == "Dashboard":
     col2.metric("Model","CNN")
     col3.metric("Classes","3")
 
+    # ---------------- REAL AI RADAR ----------------
+    import time
+    import math
+
+    st.subheader("📡 AI Powered Radar Simulation")
+
+    radar_placeholder = st.empty()
+
+    # Get last prediction
+    if len(st.session_state.history) > 0:
+        last = st.session_state.history[-1]["Activity"]
+    else:
+        last = None
+
+    # Assign color + label
+    if last == "falling":
+        dot_color = "red"
+        label = "FALLING"
+    elif last == "sitting":
+        dot_color = "yellow"
+        label = "SITTING"
+    elif last == "walking":
+        dot_color = "lime"
+        label = "WALKING"
+    else:
+        dot_color = "gray"
+        label = "NO TARGET"
+
+    target_x, target_y = 0.5, 0.3
+
+    for angle in range(0, 360, 10):
+
+        theta = math.radians(angle)
+
+        fig = go.Figure()
+
+        # Radar circle
+        fig.add_shape(
+            type="circle",
+            x0=-1, y0=-1, x1=1, y1=1,
+            line=dict(color="green", width=2)
+        )
+
+        # Sweep line
+        fig.add_trace(go.Scatter(
+            x=[0, math.cos(theta)],
+            y=[0, math.sin(theta)],
+            mode="lines",
+            line=dict(color="lime", width=3)
+        ))
+
+        # Show target ONLY if prediction exists
+        if last is not None:
+
+            fig.add_trace(go.Scatter(
+                x=[target_x],
+                y=[target_y],
+                mode="markers+text",
+                marker=dict(color=dot_color, size=14),
+                text=[label],
+                textposition="top center",
+                textfont=dict(color="white", size=12)
+            ))
+
+        fig.update_layout(
+            showlegend=False,
+            xaxis=dict(range=[-1.2,1.2], visible=False),
+            yaxis=dict(range=[-1.2,1.2], visible=False),
+            plot_bgcolor="black",
+            paper_bgcolor="black",
+            height=420
+        )
+
+        radar_placeholder.plotly_chart(fig, use_container_width=True)
+
+        time.sleep(0.08)
+
 # ---------------- UPLOAD PAGE ----------------
 if menu == "Upload Spectrogram":
 
@@ -136,7 +213,7 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-            # ---------- BUZZER (FIXED AUTO PLAY) ----------
+            # ---------- BUZZER ----------
             if predicted_class == "falling" and confidence > 75:
 
                 st.error("🚨 HIGH RISK ACTIVITY DETECTED!")
@@ -152,7 +229,6 @@ if menu == "Upload Spectrogram":
 
         col3,col4 = st.columns(2)
 
-        # PIE CHART (Confidence distribution)
         with col3:
 
             remaining = 100 - confidence
@@ -172,7 +248,6 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-        # BAR CHART (All class scores)
         with col4:
 
             score_df = pd.DataFrame({
