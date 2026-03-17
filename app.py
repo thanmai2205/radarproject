@@ -136,15 +136,16 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-            # ---------- BUZZER ----------
+            # ---------- BUZZER (FIXED AUTO PLAY) ----------
             if predicted_class == "falling" and confidence > 75:
 
                 st.error("🚨 HIGH RISK ACTIVITY DETECTED!")
 
-                st.audio(
-                    "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg",
-                    autoplay=True
-                )
+                st.markdown("""
+                <audio autoplay>
+                <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+                </audio>
+                """, unsafe_allow_html=True)
 
         # ---------- ANALYTICS ----------
         st.subheader("Prediction Analytics")
@@ -203,7 +204,6 @@ if menu == "Detection History":
 
         st.dataframe(history_df)
 
-        # FIXED PIE CHART
         avg_conf = history_df.groupby("Activity")["Confidence"].mean().reset_index()
 
         fig = px.pie(
@@ -215,7 +215,6 @@ if menu == "Detection History":
 
         st.plotly_chart(fig,use_container_width=True)
 
-        # DOWNLOAD REPORT
         csv = history_df.to_csv(index=False)
 
         st.download_button(
