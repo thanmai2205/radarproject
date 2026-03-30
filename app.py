@@ -48,15 +48,8 @@ model = None
 try:
     model = tf.keras.models.load_model("radar_model.h5", compile=False)
 except:
-    try:
-        model = tf.keras.models.load_model(
-            "radar_model.keras",
-            compile=False,
-            safe_mode=False
-        )
-    except:
-        st.error("❌ Model file not found. Please place radar_model.h5 in project folder")
-        st.stop()
+    st.error("❌ Model file not found. Please place radar_model.h5 in project folder")
+    st.stop()
 
 class_names = ["falling", "sitting", "walking"]
 
