@@ -111,7 +111,6 @@ def image_to_spectrogram(img1, img2):
 if menu == "Dashboard":
     st.metric("Total Detections", len(st.session_state.history))
 
-    # ----------- ADDED DASHBOARD VISUALS -----------
     st.markdown("### 📊 Activity Overview")
 
     if len(st.session_state.history) > 0:
@@ -124,11 +123,22 @@ if menu == "Dashboard":
             activity_count = df["Activity"].value_counts().reset_index()
             activity_count.columns = ["Activity", "Count"]
 
-            fig1 = px.pie(activity_count, names="Activity", values="Count")
+            fig1 = px.pie(
+                activity_count,
+                names="Activity",
+                values="Count",
+                title="Activity Distribution"
+            )
             st.plotly_chart(fig1, use_container_width=True)
 
         with col2:
-            fig2 = px.bar(df, x="Activity", y="Confidence", color="Activity")
+            fig2 = px.bar(
+                df,
+                x="Activity",
+                y="Confidence",
+                color="Activity",
+                title="Confidence Levels"
+            )
             st.plotly_chart(fig2, use_container_width=True)
 
     else:
@@ -179,18 +189,25 @@ elif menu == "Live Camera":
             else:
                 risk = "LOW"
 
-        # ----------- ADDED: IMPROVED MOTION LOGIC -----------
-        st.write(f"🔍 Motion Level Debug: {motion_level:.4f}")
-
-        if motion_level < 0.5:
-            predicted_class = "standing"
-        elif 0.5 <= motion_level < 5:
-            predicted_class = "sitting"
-        elif motion_level >= 5:
-            predicted_class = "walking"
-
         st.success(f"Prediction: {predicted_class.upper()}")
         st.info(f"Confidence: {confidence:.2f}%")
+
+        # ----------- ADDED LOGIC ONLY -----------
+        st.write(f"🔍 Motion Level Debug: {motion_level:.4f}")
+
+        if predicted_class != "falling":
+
+            if motion_level < 0.5:
+                predicted_class = "standing"
+
+            elif 0.5 <= motion_level < 5:
+                predicted_class = "sitting"
+
+            elif motion_level >= 5:
+                predicted_class = "walking"
+
+            st.success(f"Updated Prediction: {predicted_class.upper()}")
+        # ----------- END ADDITION -----------
 
         # 🚨 EMERGENCY SOUND
         if predicted_class == "falling" and confidence > 75:
@@ -206,4 +223,3 @@ elif menu == "Live Camera":
             "Confidence": confidence
         })
 
-# ---------------- (REST OF YOUR CODE UNCHANGED BELOW) ----------------
