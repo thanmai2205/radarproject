@@ -6,11 +6,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+import cv2
+from scipy.signal import spectrogram
 
-# ---------------- FIX KERAS COMPATIBILITY ----------------
+# ---------------- FIX KERAS ----------------
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
-# ---------------- PAGE CONFIG ----------------
+# ---------------- PAGE ----------------
 st.set_page_config(page_title="Radar Intelligent Surveillance", layout="wide")
 
 # ---------------- LOGIN ----------------
@@ -51,14 +53,12 @@ model = tf.keras.models.load_model(
 
 class_names = ["falling", "sitting", "walking"]
 
-# ---------------- SESSION STORAGE ----------------
+# ---------------- SESSION ----------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.title("📡 Radar Control Panel")
-st.sidebar.info("Click 'Live Camera' → Start Camera for detection")
-
 menu = st.sidebar.radio(
     "Navigation",
     ["Dashboard", "Upload Spectrogram", "Live Camera", "Detection History", "System Info"]
@@ -66,8 +66,6 @@ menu = st.sidebar.radio(
 
 if st.sidebar.button("Reset History"):
     st.session_state.history = []
-
-st.sidebar.success("AI Model Active")
 
 # ---------------- HEADER ----------------
 st.title("🚀 Radar Based Intelligent Surveillance")
@@ -78,66 +76,52 @@ if menu == "Dashboard":
     st.subheader("System Overview")
 
     col1, col2, col3 = st.columns(3)
-
     col1.metric("Total Detections", len(st.session_state.history))
     col2.metric("Model", "CNN")
     col3.metric("Classes", "3")
 
-# ---------------- UPLOAD PAGE ----------------
+# ---------------- SPECTROGRAM FUNCTION ----------------
+def image_to_spectrogram(image):
+    gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+
+    signal = gray.flatten()
+
+    f, t, Sxx = spectrogram(signal)
+
+    spec_img = np.log(Sxx + 1)
+
+    spec_img = (spec_img - spec_img.min()) / (spec_img.max() - spec_img.min())
+
+    spec_img = cv2.resize(spec_img, (160, 160))
+
+    spec_img = np.stack([spec_img]*3, axis=-1)
+
+    spec_img = np.expand_dims(spec_img, axis=0)
+
+    return spec_img
+
+# ---------------- UPLOAD ----------------
 elif menu == "Upload Spectrogram":
 
-    uploaded_file = st.file_uploader("Upload Radar Spectrogram", type=["png", "jpg", "jpeg"])
+    uploaded_file = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg"])
 
     if uploaded_file:
-        col1, col2 = st.columns(2)
-
         image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image")
 
-        with col1:
-            st.image(image, caption="Uploaded Spectrogram")
+        spec_img = image_to_spectrogram(image)
+        st.image(spec_img[0], caption="Generated Spectrogram")
 
-        img = image.resize((160, 160))
-        img = np.array(img) / 255.0
-        img = np.expand_dims(img, axis=0)
-
-        prediction = model.predict(img)
+        prediction = model.predict(spec_img)
 
         scores = prediction[0] * 100
         predicted_class = class_names[np.argmax(scores)]
         confidence = float(np.max(scores))
 
-        if predicted_class == "falling" and confidence > 75:
-            risk = "HIGH"
-            color = "red"
-        elif predicted_class == "sitting":
-            risk = "MEDIUM"
-            color = "orange"
-        else:
-            risk = "LOW"
-            color = "green"
+        st.success(f"Prediction: {predicted_class.upper()}")
+        st.info(f"Confidence: {confidence:.2f}%")
 
-        st.session_state.history.append({
-            "Activity": predicted_class,
-            "Confidence": confidence
-        })
-
-        with col2:
-            st.subheader("Prediction Result")
-
-            st.metric("Activity", predicted_class.upper())
-            st.metric("Confidence", f"{confidence:.2f}%")
-            st.metric("Risk Level", risk)
-
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=confidence,
-                gauge={'axis': {'range': [0, 100]},
-                       'bar': {'color': color}}
-            ))
-
-            st.plotly_chart(fig, use_container_width=True)
-
-# ---------------- LIVE CAMERA (CLOUD) ----------------
+# ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
 
     st.subheader("📷 Live AI Surveillance (Cloud Mode)")
@@ -148,16 +132,18 @@ elif menu == "Live Camera":
         image = Image.open(img_file)
         st.image(image, caption="Captured Image")
 
-        img = image.resize((160,160))
-        img = np.array(img)/255.0
-        img = np.expand_dims(img, axis=0)
+        # Generate spectrogram
+        spec_img = image_to_spectrogram(image)
+        st.image(spec_img[0], caption="Generated Spectrogram")
 
-        prediction = model.predict(img)
+        # Prediction
+        prediction = model.predict(spec_img)
 
         scores = prediction[0] * 100
         predicted_class = class_names[np.argmax(scores)]
         confidence = float(np.max(scores))
 
+        # Risk logic
         if predicted_class == "falling" and confidence > 75:
             risk = "HIGH"
         elif predicted_class == "sitting":
@@ -172,7 +158,13 @@ elif menu == "Live Camera":
         if risk == "HIGH":
             st.error("🚨 FALL DETECTED!")
 
-# ---------------- DETECTION HISTORY ----------------
+        # Save history
+        st.session_state.history.append({
+            "Activity": predicted_class,
+            "Confidence": confidence
+        })
+
+# ---------------- HISTORY ----------------
 elif menu == "Detection History":
 
     st.subheader("Detection History")
@@ -180,32 +172,24 @@ elif menu == "Detection History":
     if len(st.session_state.history) == 0:
         st.info("No detections yet")
     else:
-        history_df = pd.DataFrame(st.session_state.history)
+        df = pd.DataFrame(st.session_state.history)
+        st.dataframe(df)
 
-        st.dataframe(history_df)
+        fig = px.pie(df, names="Activity", values="Confidence")
+        st.plotly_chart(fig)
 
-        fig = px.pie(
-            history_df,
-            names="Activity",
-            values="Confidence",
-            title="Activity Distribution"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-# ---------------- SYSTEM INFO ----------------
+# ---------------- INFO ----------------
 elif menu == "System Info":
 
     st.subheader("System Information")
 
     st.markdown("""
     **Project:** Radar Based Human Activity Recognition  
-    **Model:** Convolutional Neural Network  
+    **Model:** CNN  
     **Activities:** Falling, Sitting, Walking  
-    **Framework:** TensorFlow + Streamlit  
-    **Mode:** Cloud Camera (Image Capture)
+    **Mode:** Camera → Spectrogram → Prediction  
     """)
 
 # ---------------- FOOTER ----------------
 st.markdown("---")
-st.caption("AI Radar Surveillance System | Final Year Project")
+st.caption("Final Year AI Project 🚀")
