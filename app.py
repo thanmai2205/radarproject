@@ -118,7 +118,7 @@ if menu == "Dashboard":
             st.plotly_chart(fig2, use_container_width=True)
 
     else:
-        st.info("No data available yet.")
+        st.info("No data available yet. Start detection to see analytics.")
 
 # ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
@@ -139,14 +139,21 @@ elif menu == "Live Camera":
 
         st.image(diff, caption="Motion Difference")
 
-        # ----------- ADDED: SPECTROGRAM HIGHLIGHT -----------
+        # ----------- ADDED: BORDER AROUND SPECTROGRAM -----------
         st.markdown("""
-        <div style="border:3px solid red; padding:10px; border-radius:10px;">
-        🔥 Highlighted Spectrogram
-        </div>
+        <style>
+        .highlight-img img {
+            border: 4px solid red;
+            border-radius: 10px;
+            padding: 5px;
+            background-color: rgba(255,0,0,0.05);
+        }
+        </style>
         """, unsafe_allow_html=True)
 
-        st.image(spec_img[0], caption="Spectrogram")
+        st.markdown('<div class="highlight-img">', unsafe_allow_html=True)
+        st.image(spec_img[0], caption="🔥 Highlighted Spectrogram")
+        st.markdown('</div>', unsafe_allow_html=True)
 
         prediction = model.predict(spec_img)
 
@@ -238,7 +245,67 @@ elif menu == "Detection History":
     df = pd.DataFrame(st.session_state.history)
     st.dataframe(df)
 
+    if len(df) > 0:
+        st.markdown("### 📈 Detection Insights")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            avg_conf = df.groupby("Activity")["Confidence"].mean().reset_index()
+            st.plotly_chart(px.pie(avg_conf, names="Activity", values="Confidence"))
+
+        with col2:
+            count_df = df["Activity"].value_counts().reset_index()
+            count_df.columns = ["Activity", "Count"]
+            st.plotly_chart(px.bar(count_df, x="Activity", y="Count"))
+
 # ---------------- SYSTEM INFO ----------------
 elif menu == "System Info":
+
     st.markdown("## 🖥️ System Information Dashboard")
-    st.markdown("Radar-based AI system for activity recognition.")
+
+    st.markdown("""
+    <style>
+    .card {
+        padding: 20px;
+        border-radius: 12px;
+        background-color: #1f2937;
+        color: white;
+        margin-bottom: 15px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    }
+    .title {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">📌 Project Overview</div>'
+                'Radar-based system that detects human activities like falling, sitting, walking, and standing using AI.</div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">🧠 AI Model</div>'
+                'Convolutional Neural Network (CNN) trained on radar spectrogram images.</div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">⚙️ Features</div>'
+                '✔ Live Camera Detection<br>'
+                '✔ Fall Detection with Alert<br>'
+                '✔ Spectrogram Analysis<br>'
+                '✔ Upload Prediction System<br>'
+                '✔ Detection History Tracking<br>'
+                '✔ Data Visualization Dashboard</div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">💻 Technology Stack</div>'
+                'Python • TensorFlow • OpenCV • Streamlit • Plotly</div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">📡 System Status</div>'
+                '🟢 Model Loaded<br>'
+                '🟢 AI Detection Active</div>',
+                unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.caption("🚀 Final Year Project | Radar Intelligent Surveillance System")
