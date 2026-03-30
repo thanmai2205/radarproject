@@ -152,7 +152,7 @@ elif menu == "Live Camera":
         """, unsafe_allow_html=True)
 
         st.markdown('<div class="highlight-img">', unsafe_allow_html=True)
-        st.image(spec_img[0], caption="  Spectrogram")
+        st.image(spec_img[0], caption="🔥 Highlighted Spectrogram")
         st.markdown('</div>', unsafe_allow_html=True)
 
         prediction = model.predict(spec_img)
@@ -181,6 +181,34 @@ elif menu == "Live Camera":
         st.success(f"Prediction: {predicted_class.upper()}")
         st.info(f"Confidence: {confidence:.2f}%")
         st.warning(f"Motion Level: {motion_level:.2f}")
+
+        # ----------- ADDED: VOICE ALERT SYSTEM -----------
+        if predicted_class == "falling":
+            st.markdown("""
+            <audio autoplay>
+            <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
+            </audio>
+            <script>
+            var msg = new SpeechSynthesisUtterance("Emergency! Person is falling");
+            window.speechSynthesis.speak(msg);
+            </script>
+            """, unsafe_allow_html=True)
+
+        elif predicted_class == "sitting":
+            st.markdown("""
+            <script>
+            var msg = new SpeechSynthesisUtterance("Person is sitting");
+            window.speechSynthesis.speak(msg);
+            </script>
+            """, unsafe_allow_html=True)
+
+        elif predicted_class == "walking":
+            st.markdown("""
+            <script>
+            var msg = new SpeechSynthesisUtterance("Person is walking");
+            window.speechSynthesis.speak(msg);
+            </script>
+            """, unsafe_allow_html=True)
 
         if risk == "HIGH":
             st.error("🚨 FALL DETECTED!")
@@ -304,8 +332,9 @@ elif menu == "System Info":
 
     st.markdown('<div class="card"><div class="title">📡 System Status</div>'
                 '🟢 Model Loaded<br>'
+                '🟢 Camera Ready<br>'
                 '🟢 AI Detection Active</div>',
                 unsafe_allow_html=True)
 
     st.markdown("---")
-    st.caption("Radar Intelligent Surveillance System")
+    st.caption("🚀 Final Year Project | Radar Intelligent Surveillance System")
