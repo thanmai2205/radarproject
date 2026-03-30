@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -41,8 +42,21 @@ if not st.session_state.logged_in:
     login()
     st.stop()
 
-# ---------------- LOAD MODEL ----------------
-model = tf.keras.models.load_model("radar_model.h5", compile=False)
+# ---------------- LOAD MODEL (SAFE) ----------------
+model = None
+
+try:
+    model = tf.keras.models.load_model("radar_model.h5", compile=False)
+except:
+    try:
+        model = tf.keras.models.load_model(
+            "radar_model.keras",
+            compile=False,
+            safe_mode=False
+        )
+    except:
+        st.error("❌ Model file not found. Please place radar_model.h5 in project folder")
+        st.stop()
 
 class_names = ["falling", "sitting", "walking"]
 
