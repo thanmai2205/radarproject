@@ -43,8 +43,11 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ---------------- LOAD MODEL (SAFE) ----------------
-model = None
-model = tf.keras.models.load_model("radar_model.h5", compile=False)
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(current_dir, "radar_model.h5")
+
+model = tf.keras.models.load_model(model_path, compile=False)
 
 class_names = ["falling", "sitting", "walking"]
 
