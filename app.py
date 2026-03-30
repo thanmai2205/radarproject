@@ -6,6 +6,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+# ✅ ADDED IMPORTS
+import cv2
+from scipy.signal import spectrogram
+import time
+
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Radar Intelligent Surveillance", layout="wide")
 
@@ -50,7 +55,7 @@ st.sidebar.title("📡 Radar Control Panel")
 
 menu = st.sidebar.radio(
     "Navigation",
-    ["Dashboard","Upload Spectrogram","Detection History","System Info"]
+    ["Dashboard","Upload Spectrogram","Live Camera","Detection History","System Info"]
 )
 
 if st.sidebar.button("Reset History"):
@@ -73,6 +78,30 @@ if menu == "Dashboard":
     col2.metric("Model","CNN")
     col3.metric("Classes","3")
 
+# ---------------- FUNCTION ADDED ----------------
+def frame_to_spectrogram(frame, prev_frame=None):
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    if prev_frame is None:
+        return None, gray
+
+    diff = cv2.absdiff(prev_frame, gray)
+
+    f, t, Sxx = spectrogram(diff.flatten())
+
+    spec_img = np.log(Sxx + 1)
+
+    spec_img = (spec_img - spec_img.min()) / (spec_img.max() - spec_img.min())
+
+    spec_img = cv2.resize(spec_img, (160,160))
+
+    spec_img = np.stack([spec_img]*3, axis=-1)
+
+    spec_img = np.expand_dims(spec_img, axis=0)
+
+    return spec_img, gray
+
 # ---------------- UPLOAD PAGE ----------------
 if menu == "Upload Spectrogram":
 
@@ -90,7 +119,6 @@ if menu == "Upload Spectrogram":
         with col1:
             st.image(image,caption="Uploaded Spectrogram")
 
-        # ---------- PREPROCESS ----------
         img = image.resize((160,160))
         img = np.array(img)/255.0
         img = np.expand_dims(img,axis=0)
@@ -101,7 +129,6 @@ if menu == "Upload Spectrogram":
         predicted_class = class_names[np.argmax(scores)]
         confidence = float(np.max(scores))
 
-        # ---------- RISK ----------
         if predicted_class == "falling" and confidence > 75:
             risk = "HIGH"
             color = "red"
@@ -112,13 +139,11 @@ if menu == "Upload Spectrogram":
             risk = "LOW"
             color = "green"
 
-        # ---------- SAVE HISTORY ----------
         st.session_state.history.append({
             "Activity":predicted_class,
             "Confidence":confidence
         })
 
-        # ---------- RESULTS ----------
         with col2:
 
             st.subheader("Prediction Result")
@@ -136,7 +161,6 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-            # ---------- BUZZER (FIXED AUTO PLAY) ----------
             if predicted_class == "falling" and confidence > 75:
 
                 st.error("🚨 HIGH RISK ACTIVITY DETECTED!")
@@ -147,12 +171,10 @@ if menu == "Upload Spectrogram":
                 </audio>
                 """, unsafe_allow_html=True)
 
-        # ---------- ANALYTICS ----------
         st.subheader("Prediction Analytics")
 
         col3,col4 = st.columns(2)
 
-        # PIE CHART (Confidence distribution)
         with col3:
 
             remaining = 100 - confidence
@@ -172,7 +194,6 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-        # BAR CHART (All class scores)
         with col4:
 
             score_df = pd.DataFrame({
@@ -189,6 +210,69 @@ if menu == "Upload Spectrogram":
             )
 
             st.plotly_chart(fig2,use_container_width=True)
+
+# ---------------- LIVE CAMERA (ADDED) ----------------
+if menu == "Live Camera":
+
+    st.subheader("📷 Live AI Surveillance (Spectrogram Mode)")
+
+    run = st.checkbox("Start Camera")
+
+    FRAME_WINDOW = st.image([])
+    status = st.empty()
+
+    cap = cv2.VideoCapture(0)
+
+    prev_frame = None
+
+    while run:
+
+        ret, frame = cap.read()
+
+        if not ret:
+            st.error("Camera not working")
+            break
+
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        FRAME_WINDOW.image(frame_rgb)
+
+        spec_img, prev_frame = frame_to_spectrogram(frame, prev_frame)
+
+        if spec_img is None:
+            continue
+
+        prediction = model.predict(spec_img)
+
+        scores = prediction[0]*100
+        predicted_class = class_names[np.argmax(scores)]
+        confidence = float(np.max(scores))
+
+        if predicted_class == "falling" and confidence > 75:
+            risk = "HIGH"
+        elif predicted_class == "sitting":
+            risk = "MEDIUM"
+        else:
+            risk = "LOW"
+
+        status.markdown(f"""
+        **Prediction:** {predicted_class.upper()}  
+        **Confidence:** {confidence:.2f}%  
+        **Risk Level:** {risk}
+        """)
+
+        if predicted_class == "falling" and confidence > 75:
+
+            st.error("🚨 FALL DETECTED!")
+
+            st.markdown("""
+            <audio autoplay>
+            <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
+            </audio>
+            """, unsafe_allow_html=True)
+
+        time.sleep(0.2)
+
+    cap.release()
 
 # ---------------- DETECTION HISTORY ----------------
 if menu == "Detection History":
