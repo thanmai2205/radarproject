@@ -1,4 +1,3 @@
-# ✅ YOUR ORIGINAL IMPORTS (UNCHANGED)
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -8,8 +7,6 @@ import plotly.express as px
 import os
 import cv2
 from scipy.signal import spectrogram
-
-# ✅ ADDED (from 2nd code)
 import plotly.graph_objects as go
 
 # ---------------- PAGE ----------------
@@ -65,7 +62,6 @@ menu = st.sidebar.radio(
     ["Dashboard", "Live Camera", "Upload Spectrogram", "Detection History", "System Info"]
 )
 
-# ✅ ADDED RESET BUTTON
 if st.sidebar.button("Reset History"):
     st.session_state.history = []
 
@@ -102,6 +98,40 @@ def image_to_spectrogram(img1, img2):
 if menu == "Dashboard":
     st.metric("Total Detections", len(st.session_state.history))
 
+    # ----------- ADDED DASHBOARD VISUALS -----------
+    st.markdown("### 📊 Activity Overview")
+
+    if len(st.session_state.history) > 0:
+
+        df = pd.DataFrame(st.session_state.history)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            activity_count = df["Activity"].value_counts().reset_index()
+            activity_count.columns = ["Activity", "Count"]
+
+            fig1 = px.pie(
+                activity_count,
+                names="Activity",
+                values="Count",
+                title="Activity Distribution"
+            )
+            st.plotly_chart(fig1, use_container_width=True)
+
+        with col2:
+            fig2 = px.bar(
+                df,
+                x="Activity",
+                y="Confidence",
+                color="Activity",
+                title="Confidence Levels"
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+
+    else:
+        st.info("No data available yet. Start detection to see analytics.")
+
 # ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
 
@@ -128,7 +158,6 @@ elif menu == "Live Camera":
         base_class = model_classes[np.argmax(scores)]
         confidence = float(np.max(scores))
 
-        # ✅ ORIGINAL LOGIC UNCHANGED
         if motion_level < 2:
             predicted_class = "standing"
             risk = "LOW"
@@ -212,7 +241,6 @@ elif menu == "Upload Spectrogram":
                 </audio>
                 """, unsafe_allow_html=True)
 
-        # Charts
         st.subheader("Analytics")
 
         col3, col4 = st.columns(2)
@@ -235,6 +263,37 @@ elif menu == "Upload Spectrogram":
 elif menu == "Detection History":
     df = pd.DataFrame(st.session_state.history)
     st.dataframe(df)
+
+    # ----------- ADDED HISTORY ANALYTICS -----------
+    if len(df) > 0:
+
+        st.markdown("### 📈 Detection Insights")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            avg_conf = df.groupby("Activity")["Confidence"].mean().reset_index()
+
+            fig3 = px.pie(
+                avg_conf,
+                names="Activity",
+                values="Confidence",
+                title="Average Confidence by Activity"
+            )
+            st.plotly_chart(fig3, use_container_width=True)
+
+        with col2:
+            count_df = df["Activity"].value_counts().reset_index()
+            count_df.columns = ["Activity", "Count"]
+
+            fig4 = px.bar(
+                count_df,
+                x="Activity",
+                y="Count",
+                color="Activity",
+                title="Activity Frequency"
+            )
+            st.plotly_chart(fig4, use_container_width=True)
 
     if len(df) > 0:
         csv = df.to_csv(index=False)
