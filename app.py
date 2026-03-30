@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import os
 import cv2
 from scipy.signal import spectrogram
@@ -68,25 +67,42 @@ if st.sidebar.button("Reset History"):
 st.title("🚀 Radar Based Intelligent Surveillance")
 st.caption("AI Powered Human Activity Recognition")
 
-# ---------------- SPECTROGRAM FUNCTION ----------------
-def image_to_spectrogram(image):
-    gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+# ---------------- IMPROVED SPECTROGRAM ----------------
+def image_to_spectrogram(img1, img2):
+    gray1 = cv2.cvtColor(np.array(img1), cv2.COLOR_RGB2GRAY)
+    gray2 = cv2.cvtColor(np.array(img2), cv2.COLOR_RGB2GRAY)
 
-    signal = gray.flatten()
+    # Motion detection
+    diff = cv2.absdiff(gray1, gray2)
 
-    f, t, Sxx = spectrogram(signal)
+    # Smooth
+    diff = cv2.GaussianBlur(diff, (5,5), 0)
 
-    spec_img = np.log(Sxx + 1)
+    # Normalize
+    diff = diff / 255.0
 
-    spec_img = (spec_img - spec_img.min()) / (spec_img.max() - spec_img.min())
+    # Flatten
+    signal = diff.flatten()
 
-    spec_img = cv2.resize(spec_img, (160, 160))
+    # Spectrogram
+    f, t, Sxx = spectrogram(signal, fs=100)
 
-    spec_img = np.stack([spec_img]*3, axis=-1)
+    # Log scaling
+    Sxx = np.log(Sxx + 1e-10)
 
+    # Normalize
+    Sxx = (Sxx - np.min(Sxx)) / (np.max(Sxx) - np.min(Sxx))
+
+    # Resize
+    spec_img = cv2.resize(Sxx, (160,160))
+
+    # Color map (🔥 makes it look real)
+    spec_img = cv2.applyColorMap((spec_img*255).astype(np.uint8), cv2.COLORMAP_JET)
+
+    spec_img = spec_img / 255.0
     spec_img = np.expand_dims(spec_img, axis=0)
 
-    return spec_img
+    return spec_img, diff
 
 # ---------------- DASHBOARD ----------------
 if menu == "Dashboard":
@@ -100,44 +116,44 @@ if menu == "Dashboard":
 # ---------------- UPLOAD ----------------
 elif menu == "Upload Spectrogram":
 
-    uploaded_file = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg"])
+    uploaded_file = st.file_uploader("Upload Image", type=["png","jpg","jpeg"])
 
     if uploaded_file:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image")
+        st.image(image)
 
-        spec_img = image_to_spectrogram(image)
-        st.image(spec_img[0], caption="Generated Spectrogram")
-
-        prediction = model.predict(spec_img)
-
-        scores = prediction[0] * 100
-        predicted_class = class_names[np.argmax(scores)]
-        confidence = float(np.max(scores))
-
-        st.success(f"Prediction: {predicted_class.upper()}")
-        st.info(f"Confidence: {confidence:.2f}%")
+        st.warning("Upload TWO images for motion-based spectrogram")
 
 # ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
 
-    st.subheader("📷 Live AI Surveillance (Cloud Mode)")
+    st.subheader("📷 Live AI Surveillance (2-Frame Motion Mode)")
 
-    img_file = st.camera_input("📸 Capture Image")
+    st.info("Capture TWO frames while moving slightly")
 
-    if img_file is not None:
-        image = Image.open(img_file)
-        st.image(image, caption="Captured Image")
+    img1 = st.camera_input("📸 Capture Frame 1")
+    img2 = st.camera_input("📸 Capture Frame 2")
 
-        spec_img = image_to_spectrogram(image)
-        st.image(spec_img[0], caption="Generated Spectrogram")
+    if img1 and img2:
+        image1 = Image.open(img1)
+        image2 = Image.open(img2)
 
+        st.image([image1, image2], caption=["Frame 1", "Frame 2"])
+
+        # Generate spectrogram
+        spec_img, diff = image_to_spectrogram(image1, image2)
+
+        st.image(diff, caption="Motion Difference")
+        st.image(spec_img[0], caption="Radar-like Spectrogram 🔥")
+
+        # Prediction
         prediction = model.predict(spec_img)
 
         scores = prediction[0] * 100
         predicted_class = class_names[np.argmax(scores)]
         confidence = float(np.max(scores))
 
+        # Risk logic
         if predicted_class == "falling" and confidence > 75:
             risk = "HIGH"
         elif predicted_class == "sitting":
@@ -152,6 +168,7 @@ elif menu == "Live Camera":
         if risk == "HIGH":
             st.error("🚨 FALL DETECTED!")
 
+        # Save history
         st.session_state.history.append({
             "Activity": predicted_class,
             "Confidence": confidence
@@ -179,8 +196,8 @@ elif menu == "System Info":
     st.markdown("""
     **Project:** Radar Based Human Activity Recognition  
     **Model:** CNN  
-    **Activities:** Falling, Sitting, Walking  
-    **Mode:** Camera → Spectrogram → Prediction  
+    **Technique:** Motion-based Spectrogram Simulation  
+    **Pipeline:** Camera → Motion → Spectrogram → Prediction  
     """)
 
 # ---------------- FOOTER ----------------
