@@ -43,11 +43,9 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ---------------- LOAD MODEL ----------------
-model = tf.keras.models.load_model(
-    "radar_model.keras",
-    compile=False,
-    safe_mode=False
-)
+from keras.models import load_model
+
+model = load_model("radar_model.keras", compile=False)
 class_names = ["falling","sitting","walking"]
 
 # ---------------- SESSION STORAGE ----------------
