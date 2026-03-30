@@ -44,12 +44,7 @@ if not st.session_state.logged_in:
 
 # ---------------- LOAD MODEL (SAFE) ----------------
 model = None
-
-try:
-    model = tf.keras.models.load_model("radar_model.h5", compile=False)
-except:
-    st.error("❌ Model file not found. Please place radar_model.h5 in project folder")
-    st.stop()
+model = tf.keras.models.load_model("radar_model.h5", compile=False)
 
 class_names = ["falling", "sitting", "walking"]
 
