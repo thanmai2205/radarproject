@@ -42,11 +42,17 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ---------------- LOAD MODEL ----------------
-model = tf.keras.models.load_model(
-  "radar_model.keras",
-    compile=False,
-    safe_mode=False
-)
+try:
+    model = tf.keras.models.load_model(
+        "radar_model.keras",
+        compile=False,
+        safe_mode=False
+    )
+except:
+    model = tf.keras.models.load_model(
+        "radar_model.h5",
+        compile=False
+    )
 
 class_names = ["falling", "sitting", "walking"]
 
