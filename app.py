@@ -337,4 +337,4 @@ elif menu == "System Info":
                 unsafe_allow_html=True)
 
     st.markdown("---")
-    st.caption("🚀 Final Year Project | Radar Intelligent Surveillance System")
+    st.caption(" Radar Intelligent Surveillance System")
