@@ -43,7 +43,7 @@ if not st.session_state.logged_in:
 
 # ---------------- LOAD MODEL ----------------
 model = tf.keras.models.load_model(
-    "radar_model.keras",
+  "C:/Users/HP/OneDrive/Desktop/RADER_HAR_PROJECT/radar_model.keras",
     compile=False,
     safe_mode=False
 )
