@@ -139,7 +139,7 @@ elif menu == "Live Camera":
 
         st.image(diff, caption="Motion Difference")
 
-        # ----------- ADDED: BORDER AROUND SPECTROGRAM -----------
+        # ----------- ADDED: SPECTROGRAM BORDER -----------
         st.markdown("""
         <style>
         .highlight-img img {
@@ -182,7 +182,7 @@ elif menu == "Live Camera":
         st.info(f"Confidence: {confidence:.2f}%")
         st.warning(f"Motion Level: {motion_level:.2f}")
 
-        # ----------- ADDED: VOICE ALERT SYSTEM -----------
+        # ----------- ADDED: VOICE ALERT -----------
         if predicted_class == "falling":
             st.markdown("""
             <audio autoplay>
@@ -268,24 +268,18 @@ elif menu == "Upload Spectrogram":
             ))
             st.plotly_chart(fig, use_container_width=True)
 
+            # ----------- ADDED: VOICE ALERT -----------
+            if predicted_class == "falling":
+                st.markdown("""<script>speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency! Person is falling"));</script>""", unsafe_allow_html=True)
+            elif predicted_class == "sitting":
+                st.markdown("""<script>speechSynthesis.speak(new SpeechSynthesisUtterance("Person is sitting"));</script>""", unsafe_allow_html=True)
+            elif predicted_class == "walking":
+                st.markdown("""<script>speechSynthesis.speak(new SpeechSynthesisUtterance("Person is walking"));</script>""", unsafe_allow_html=True)
+
 # ---------------- HISTORY ----------------
 elif menu == "Detection History":
     df = pd.DataFrame(st.session_state.history)
     st.dataframe(df)
-
-    if len(df) > 0:
-        st.markdown("### 📈 Detection Insights")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            avg_conf = df.groupby("Activity")["Confidence"].mean().reset_index()
-            st.plotly_chart(px.pie(avg_conf, names="Activity", values="Confidence"))
-
-        with col2:
-            count_df = df["Activity"].value_counts().reset_index()
-            count_df.columns = ["Activity", "Count"]
-            st.plotly_chart(px.bar(count_df, x="Activity", y="Count"))
 
 # ---------------- SYSTEM INFO ----------------
 elif menu == "System Info":
@@ -337,4 +331,4 @@ elif menu == "System Info":
                 unsafe_allow_html=True)
 
     st.markdown("---")
-    st.caption(" Radar Intelligent Surveillance System")
+    st.caption("🚀 Final Year Project | Radar Intelligent Surveillance System")
