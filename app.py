@@ -5,8 +5,6 @@ from PIL import Image
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import cv2
-import time
 import os
 
 # ---------------- FIX KERAS COMPATIBILITY ----------------
@@ -41,9 +39,7 @@ if not st.session_state.logged_in:
     login()
     st.stop()
 
-# ---------------- LOAD MODEL (SAFE) ----------------
-import os
-
+# ---------------- LOAD MODEL ----------------
 current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(current_dir, "radar_model.keras")
 
@@ -52,6 +48,7 @@ model = tf.keras.models.load_model(
     compile=False,
     safe_mode=False
 )
+
 class_names = ["falling", "sitting", "walking"]
 
 # ---------------- SESSION STORAGE ----------------
@@ -60,7 +57,7 @@ if "history" not in st.session_state:
 
 # ---------------- SIDEBAR ----------------
 st.sidebar.title("📡 Radar Control Panel")
-st.sidebar.info("Click 'Live Camera' → Start Camera for real-time detection")
+st.sidebar.info("Click 'Live Camera' → Start Camera for detection")
 
 menu = st.sidebar.radio(
     "Navigation",
@@ -86,25 +83,8 @@ if menu == "Dashboard":
     col2.metric("Model", "CNN")
     col3.metric("Classes", "3")
 
-# ---------------- SPECTROGRAM FUNCTION ----------------
-def frame_to_spectrogram(frame, prev_frame=None):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    if prev_frame is None:
-        return None, gray
-
-    diff = cv2.absdiff(prev_frame, gray)
-
-    # Fake spectrogram (simulation)
-    spec_img = cv2.merge([diff, diff, diff])
-    spec_img = spec_img / 255.0
-    spec_img = cv2.resize(spec_img, (160, 160))
-    spec_img = np.expand_dims(spec_img, axis=0)
-
-    return spec_img, gray
-
 # ---------------- UPLOAD PAGE ----------------
-if menu == "Upload Spectrogram":
+elif menu == "Upload Spectrogram":
 
     uploaded_file = st.file_uploader("Upload Radar Spectrogram", type=["png", "jpg", "jpeg"])
 
@@ -157,84 +137,48 @@ if menu == "Upload Spectrogram":
 
             st.plotly_chart(fig, use_container_width=True)
 
-# ---------------- LIVE CAMERA ----------------
-if menu == "Live Camera":
+# ---------------- LIVE CAMERA (CLOUD) ----------------
+elif menu == "Live Camera":
 
-    st.subheader("📷 Live AI Surveillance (Simulation Mode)")
+    st.subheader("📷 Live AI Surveillance (Cloud Mode)")
 
-    run = st.checkbox("Start Camera")
+    img_file = st.camera_input("📸 Capture Image")
 
-    FRAME_WINDOW = st.image([])
-    status = st.empty()
+    if img_file is not None:
+        image = Image.open(img_file)
+        st.image(image, caption="Captured Image")
 
-    if run:
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        img = image.resize((160,160))
+        img = np.array(img)/255.0
+        img = np.expand_dims(img, axis=0)
 
-        if not cap.isOpened():
-            st.error("❌ Camera not accessible")
-            st.stop()
+        prediction = model.predict(img)
 
-        prev_frame = None
+        scores = prediction[0] * 100
+        predicted_class = class_names[np.argmax(scores)]
+        confidence = float(np.max(scores))
 
-        while run:
-            ret, frame = cap.read()
+        if predicted_class == "falling" and confidence > 75:
+            risk = "HIGH"
+        elif predicted_class == "sitting":
+            risk = "MEDIUM"
+        else:
+            risk = "LOW"
 
-            if not ret:
-                st.error("Camera not working")
-                break
+        st.success(f"Prediction: {predicted_class.upper()}")
+        st.info(f"Confidence: {confidence:.2f}%")
+        st.warning(f"Risk Level: {risk}")
 
-            frame = cv2.resize(frame, (320, 240))
-
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            FRAME_WINDOW.image(frame_rgb)
-
-            spec_img, prev_frame = frame_to_spectrogram(frame, prev_frame)
-
-            if spec_img is None:
-                continue
-
-            prediction = model.predict(spec_img)
-
-            scores = prediction[0] * 100
-            predicted_class = class_names[np.argmax(scores)]
-            confidence = float(np.max(scores))
-
-            if predicted_class == "falling" and confidence > 75:
-                risk = "HIGH"
-            elif predicted_class == "sitting":
-                risk = "MEDIUM"
-            else:
-                risk = "LOW"
-
-            # Display text
-            status.markdown(f"""
-            **Prediction:** {predicted_class.upper()}  
-            **Confidence:** {confidence:.2f}%  
-            **Risk Level:** {risk}
-            """)
-
-            # Progress bar
-            st.progress(int(confidence))
-
-            # Show label on frame
-            cv2.putText(frame, predicted_class, (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-            if predicted_class == "falling" and confidence > 75:
-                st.error("🚨 FALL DETECTED!")
-
-            time.sleep(0.2)
-
-        cap.release()
+        if risk == "HIGH":
+            st.error("🚨 FALL DETECTED!")
 
 # ---------------- DETECTION HISTORY ----------------
-if menu == "Detection History":
+elif menu == "Detection History":
 
     st.subheader("Detection History")
 
     if len(st.session_state.history) == 0:
         st.info("No detections yet")
-
     else:
         history_df = pd.DataFrame(st.session_state.history)
 
@@ -250,7 +194,7 @@ if menu == "Detection History":
         st.plotly_chart(fig, use_container_width=True)
 
 # ---------------- SYSTEM INFO ----------------
-if menu == "System Info":
+elif menu == "System Info":
 
     st.subheader("System Information")
 
@@ -259,10 +203,9 @@ if menu == "System Info":
     **Model:** Convolutional Neural Network  
     **Activities:** Falling, Sitting, Walking  
     **Framework:** TensorFlow + Streamlit  
-    **Mode:** Simulation (Webcam-based Spectrogram)
+    **Mode:** Cloud Camera (Image Capture)
     """)
 
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.caption("AI Radar Surveillance System | Final Year Project")
-
