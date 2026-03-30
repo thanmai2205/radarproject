@@ -163,8 +163,10 @@ if menu == "Live Camera":
 
     FRAME_WINDOW = st.image([])
     status = st.empty()
-
-    cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+if not cap.isOpened():
+    st.error("❌ Camera not accessible")
+    st.stop()
     prev_frame = None
 
     while run:
