@@ -183,32 +183,19 @@ elif menu == "Live Camera":
         st.warning(f"Motion Level: {motion_level:.2f}")
 
         # ----------- ADDED: VOICE ALERT -----------
-        if predicted_class == "falling":
-            st.markdown("""
+        def play_voice(message):
+            st.markdown(f"""
             <audio autoplay>
-            <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
+            <source src="https://translate.google.com/translate_tts?ie=UTF-8&q={message}&tl=en&client=tw-ob">
             </audio>
-            <script>
-            var msg = new SpeechSynthesisUtterance("Emergency! Person is falling");
-            window.speechSynthesis.speak(msg);
-            </script>
             """, unsafe_allow_html=True)
 
+        if predicted_class == "falling":
+            play_voice("Emergency! Person is falling")
         elif predicted_class == "sitting":
-            st.markdown("""
-            <script>
-            var msg = new SpeechSynthesisUtterance("Person is sitting");
-            window.speechSynthesis.speak(msg);
-            </script>
-            """, unsafe_allow_html=True)
-
+            play_voice("Person is sitting")
         elif predicted_class == "walking":
-            st.markdown("""
-            <script>
-            var msg = new SpeechSynthesisUtterance("Person is walking");
-            window.speechSynthesis.speak(msg);
-            </script>
-            """, unsafe_allow_html=True)
+            play_voice("Person is walking")
 
         if risk == "HIGH":
             st.error("🚨 FALL DETECTED!")
@@ -269,12 +256,38 @@ elif menu == "Upload Spectrogram":
             st.plotly_chart(fig, use_container_width=True)
 
             # ----------- ADDED: VOICE ALERT -----------
+            def play_voice(message):
+                st.markdown(f"""
+                <audio autoplay>
+                <source src="https://translate.google.com/translate_tts?ie=UTF-8&q={message}&tl=en&client=tw-ob">
+                </audio>
+                """, unsafe_allow_html=True)
+
             if predicted_class == "falling":
-                st.markdown("""<script>speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency! Person is falling"));</script>""", unsafe_allow_html=True)
+                play_voice("Emergency! Person is falling")
             elif predicted_class == "sitting":
-                st.markdown("""<script>speechSynthesis.speak(new SpeechSynthesisUtterance("Person is sitting"));</script>""", unsafe_allow_html=True)
+                play_voice("Person is sitting")
             elif predicted_class == "walking":
-                st.markdown("""<script>speechSynthesis.speak(new SpeechSynthesisUtterance("Person is walking"));</script>""", unsafe_allow_html=True)
+                play_voice("Person is walking")
+
+        # ----------- ADDED: GRAPH ANALYTICS -----------
+        st.subheader("Prediction Analytics")
+
+        col3, col4 = st.columns(2)
+
+        with col3:
+            pie_df = pd.DataFrame({
+                "Label":[predicted_class,"Other Activities"],
+                "Value":[confidence,100-confidence]
+            })
+            st.plotly_chart(px.pie(pie_df, names="Label", values="Value"))
+
+        with col4:
+            score_df = pd.DataFrame({
+                "Activity":model_classes,
+                "Confidence":scores
+            })
+            st.plotly_chart(px.bar(score_df, x="Activity", y="Confidence"))
 
 # ---------------- HISTORY ----------------
 elif menu == "Detection History":
