@@ -163,62 +163,66 @@ if menu == "Live Camera":
 
     FRAME_WINDOW = st.image([])
     status = st.empty()
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-if not cap.isOpened():
-    st.error("❌ Camera not accessible")
-    st.stop()
-    prev_frame = None
 
-    while run:
-        ret, frame = cap.read()
+    if run:
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
-        if not ret:
-            st.error("Camera not working")
-            break
+        if not cap.isOpened():
+            st.error("❌ Camera not accessible")
+            st.stop()
 
-        frame = cv2.resize(frame, (320, 240))
+        prev_frame = None
 
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        FRAME_WINDOW.image(frame_rgb)
+        while run:
+            ret, frame = cap.read()
 
-        spec_img, prev_frame = frame_to_spectrogram(frame, prev_frame)
+            if not ret:
+                st.error("Camera not working")
+                break
 
-        if spec_img is None:
-            continue
+            frame = cv2.resize(frame, (320, 240))
 
-        prediction = model.predict(spec_img)
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            FRAME_WINDOW.image(frame_rgb)
 
-        scores = prediction[0] * 100
-        predicted_class = class_names[np.argmax(scores)]
-        confidence = float(np.max(scores))
+            spec_img, prev_frame = frame_to_spectrogram(frame, prev_frame)
 
-        if predicted_class == "falling" and confidence > 75:
-            risk = "HIGH"
-        elif predicted_class == "sitting":
-            risk = "MEDIUM"
-        else:
-            risk = "LOW"
+            if spec_img is None:
+                continue
 
-        # Display text
-        status.markdown(f"""
-        **Prediction:** {predicted_class.upper()}  
-        **Confidence:** {confidence:.2f}%  
-        **Risk Level:** {risk}
-        """)
+            prediction = model.predict(spec_img)
 
-        # Progress bar
-        st.progress(int(confidence))
+            scores = prediction[0] * 100
+            predicted_class = class_names[np.argmax(scores)]
+            confidence = float(np.max(scores))
 
-        # Show label on frame
-        cv2.putText(frame, predicted_class, (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            if predicted_class == "falling" and confidence > 75:
+                risk = "HIGH"
+            elif predicted_class == "sitting":
+                risk = "MEDIUM"
+            else:
+                risk = "LOW"
 
-        if predicted_class == "falling" and confidence > 75:
-            st.error("🚨 FALL DETECTED!")
+            # Display text
+            status.markdown(f"""
+            **Prediction:** {predicted_class.upper()}  
+            **Confidence:** {confidence:.2f}%  
+            **Risk Level:** {risk}
+            """)
 
-        time.sleep(0.2)
+            # Progress bar
+            st.progress(int(confidence))
 
-    cap.release()
+            # Show label on frame
+            cv2.putText(frame, predicted_class, (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+            if predicted_class == "falling" and confidence > 75:
+                st.error("🚨 FALL DETECTED!")
+
+            time.sleep(0.2)
+
+        cap.release()
 
 # ---------------- DETECTION HISTORY ----------------
 if menu == "Detection History":
