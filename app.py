@@ -301,8 +301,52 @@ elif menu == "Detection History":
 
 # ---------------- SYSTEM INFO ----------------
 elif menu == "System Info":
+
+    st.markdown("## 🖥️ System Information Dashboard")
+
     st.markdown("""
-    **Project:** Radar Based Human Activity Recognition  
-    **Model:** CNN  
-    **Activities:** Falling, Sitting, Walking  
-    """)
+    <style>
+    .card {
+        padding: 20px;
+        border-radius: 12px;
+        background-color: #1f2937;
+        color: white;
+        margin-bottom: 15px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    }
+    .title {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">📌 Project Overview</div>'
+                'Radar-based system that detects human activities like falling, sitting, walking, and standing using AI.</div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">🧠 AI Model</div>'
+                'Convolutional Neural Network (CNN) trained on radar spectrogram images.</div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">⚙️ Features</div>'
+                '✔ Live Camera Detection<br>'
+                '✔ Fall Detection with Alert<br>'
+                '✔ Spectrogram Analysis<br>'
+                '✔ Upload Prediction System<br>'
+                '✔ Detection History Tracking<br>'
+                '✔ Data Visualization Dashboard</div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">💻 Technology Stack</div>'
+                'Python • TensorFlow • OpenCV • Streamlit • Plotly</div>',
+                unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="title">📡 System Status</div>'
+                '🟢 Model Loaded<br>'
+                '🟢 Camera Ready<br>'
+                '🟢 AI Detection Active</div>',
+                unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.caption("🚀 Final Year Project | Radar Intelligent Surveillance System")
