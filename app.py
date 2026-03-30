@@ -9,10 +9,7 @@ import os
 import cv2
 from scipy.signal import spectrogram
 
-# ---------------- FIX KERAS ----------------
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-
-# ---------------- PAGE ----------------
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Radar Intelligent Surveillance", layout="wide")
 
 # ---------------- LOGIN ----------------
@@ -71,15 +68,6 @@ if st.sidebar.button("Reset History"):
 st.title("🚀 Radar Based Intelligent Surveillance")
 st.caption("AI Powered Human Activity Recognition")
 
-# ---------------- DASHBOARD ----------------
-if menu == "Dashboard":
-    st.subheader("System Overview")
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Detections", len(st.session_state.history))
-    col2.metric("Model", "CNN")
-    col3.metric("Classes", "3")
-
 # ---------------- SPECTROGRAM FUNCTION ----------------
 def image_to_spectrogram(image):
     gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
@@ -99,6 +87,15 @@ def image_to_spectrogram(image):
     spec_img = np.expand_dims(spec_img, axis=0)
 
     return spec_img
+
+# ---------------- DASHBOARD ----------------
+if menu == "Dashboard":
+    st.subheader("System Overview")
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Detections", len(st.session_state.history))
+    col2.metric("Model", "CNN")
+    col3.metric("Classes", "3")
 
 # ---------------- UPLOAD ----------------
 elif menu == "Upload Spectrogram":
@@ -132,18 +129,15 @@ elif menu == "Live Camera":
         image = Image.open(img_file)
         st.image(image, caption="Captured Image")
 
-        # Generate spectrogram
         spec_img = image_to_spectrogram(image)
         st.image(spec_img[0], caption="Generated Spectrogram")
 
-        # Prediction
         prediction = model.predict(spec_img)
 
         scores = prediction[0] * 100
         predicted_class = class_names[np.argmax(scores)]
         confidence = float(np.max(scores))
 
-        # Risk logic
         if predicted_class == "falling" and confidence > 75:
             risk = "HIGH"
         elif predicted_class == "sitting":
@@ -158,7 +152,6 @@ elif menu == "Live Camera":
         if risk == "HIGH":
             st.error("🚨 FALL DETECTED!")
 
-        # Save history
         st.session_state.history.append({
             "Activity": predicted_class,
             "Confidence": confidence
