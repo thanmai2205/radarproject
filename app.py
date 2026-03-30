@@ -12,9 +12,36 @@ import plotly.graph_objects as go
 # ---------------- PAGE ----------------
 st.set_page_config(page_title="Radar Intelligent Surveillance", layout="wide")
 
+# ----------- GLOBAL UI STYLE -----------
+st.markdown("""
+<style>
+body {
+    background-color: #0f172a;
+}
+.main-title {
+    font-size: 35px;
+    font-weight: bold;
+    color: #38bdf8;
+}
+.card {
+    padding: 20px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    color: white;
+    margin-bottom: 15px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+}
+.highlight {
+    border: 3px solid red;
+    border-radius: 10px;
+    padding: 8px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------- LOGIN ----------------
 def login():
-    st.title("🔐 Radar Surveillance Login")
+    st.markdown('<div class="main-title">🔐 Radar Surveillance Login</div>', unsafe_allow_html=True)
 
     users = {
         "admin": "radar123",
@@ -38,17 +65,9 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ---------------- MODEL ----------------
-current_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(current_dir, "radar_model.keras")
-
-model = tf.keras.models.load_model(
-    model_path,
-    compile=False,
-    safe_mode=False
-)
+model = tf.keras.models.load_model("radar_model.keras", compile=False, safe_mode=False)
 
 model_classes = ["falling", "sitting", "walking"]
-display_classes = ["falling", "sitting", "standing", "walking"]
 
 # ---------------- SESSION ----------------
 if "history" not in st.session_state:
@@ -66,7 +85,7 @@ if st.sidebar.button("Reset History"):
     st.session_state.history = []
 
 # ---------------- HEADER ----------------
-st.title("🚀 Radar Based Intelligent Surveillance")
+st.markdown('<div class="main-title">🚀 Radar Intelligent Surveillance System</div>', unsafe_allow_html=True)
 
 # ---------------- SPECTROGRAM ----------------
 def image_to_spectrogram(img1, img2):
@@ -74,8 +93,6 @@ def image_to_spectrogram(img1, img2):
     gray2 = cv2.cvtColor(np.array(img2), cv2.COLOR_RGB2GRAY)
 
     diff = cv2.absdiff(gray1, gray2)
-    diff = cv2.GaussianBlur(diff, (5,5), 0)
-
     motion_level = np.mean(diff)
 
     diff = diff / 255.0
@@ -85,7 +102,6 @@ def image_to_spectrogram(img1, img2):
     Sxx = np.log(Sxx + 1e-10)
 
     Sxx = (Sxx - np.min(Sxx)) / (np.max(Sxx) - np.min(Sxx))
-
     spec_img = cv2.resize(Sxx, (160,160))
     spec_img = cv2.applyColorMap((spec_img*255).astype(np.uint8), cv2.COLORMAP_JET)
 
@@ -96,35 +112,24 @@ def image_to_spectrogram(img1, img2):
 
 # ---------------- DASHBOARD ----------------
 if menu == "Dashboard":
+
     st.metric("Total Detections", len(st.session_state.history))
 
-    st.markdown("### 📊 Activity Overview")
-
     if len(st.session_state.history) > 0:
-
         df = pd.DataFrame(st.session_state.history)
 
         col1, col2 = st.columns(2)
 
         with col1:
-            activity_count = df["Activity"].value_counts().reset_index()
-            activity_count.columns = ["Activity", "Count"]
-
-            fig1 = px.pie(activity_count, names="Activity", values="Count")
-            st.plotly_chart(fig1, use_container_width=True)
+            st.plotly_chart(px.pie(df, names="Activity"))
 
         with col2:
-            fig2 = px.bar(df, x="Activity", y="Confidence", color="Activity")
-            st.plotly_chart(fig2, use_container_width=True)
-
-    else:
-        st.info("No data available yet. Start detection to see analytics.")
+            st.plotly_chart(px.bar(df, x="Activity", y="Confidence"))
 
 # ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
 
     st.subheader("📷 Live AI Surveillance")
-    st.info("Capture 2 frames (move slightly)")
 
     img1 = st.camera_input("Frame 1")
     img2 = st.camera_input("Frame 2")
@@ -133,90 +138,51 @@ elif menu == "Live Camera":
         image1 = Image.open(img1)
         image2 = Image.open(img2)
 
-        st.image([image1, image2], caption=["Frame 1", "Frame 2"])
-
         spec_img, diff, motion_level = image_to_spectrogram(image1, image2)
 
-        st.image(diff, caption="Motion Difference")
+        st.image(diff)
 
-        # ----------- ADDED: SPECTROGRAM BORDER -----------
-        st.markdown("""
-        <style>
-        .highlight-img img {
-            border: 4px solid red;
-            border-radius: 10px;
-            padding: 5px;
-            background-color: rgba(255,0,0,0.05);
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-        st.markdown('<div class="highlight-img">', unsafe_allow_html=True)
-        st.image(spec_img[0], caption="🔥 Highlighted Spectrogram")
+        st.markdown('<div class="highlight">', unsafe_allow_html=True)
+        st.image(spec_img[0])
         st.markdown('</div>', unsafe_allow_html=True)
 
         prediction = model.predict(spec_img)
-
         scores = prediction[0] * 100
-        base_class = model_classes[np.argmax(scores)]
+
+        predicted_class = model_classes[np.argmax(scores)]
         confidence = float(np.max(scores))
 
+        # Standing logic
         if motion_level < 2:
             predicted_class = "standing"
-            risk = "LOW"
-        else:
-            predicted_class = base_class
 
-            # ----------- ADDED: FORCE STANDING -----------
-            if predicted_class == "sitting":
-                predicted_class = "standing"
-
-            if predicted_class == "falling" and confidence > 75:
-                risk = "HIGH"
-            elif predicted_class == "sitting":
-                risk = "MEDIUM"
-            else:
-                risk = "LOW"
+        if predicted_class == "sitting":
+            predicted_class = "standing"
 
         st.success(f"Prediction: {predicted_class.upper()}")
-        st.info(f"Confidence: {confidence:.2f}%")
-        st.warning(f"Motion Level: {motion_level:.2f}")
 
-        # ----------- ADDED: VOICE ALERT -----------
-        def play_voice(message):
-            st.markdown(f"""
+        # 🚨 EMERGENCY SOUND
+        if predicted_class == "falling" and confidence > 75:
+            st.error("🚨 FALL DETECTED!")
+            st.markdown("""
             <audio autoplay>
-            <source src="https://translate.google.com/translate_tts?ie=UTF-8&q={message}&tl=en&client=tw-ob">
+            <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
             </audio>
             """, unsafe_allow_html=True)
-
-        if predicted_class == "falling":
-            play_voice("Emergency! Person is falling")
-        elif predicted_class == "sitting":
-            play_voice("Person is sitting")
-        elif predicted_class == "walking":
-            play_voice("Person is walking")
-
-        if risk == "HIGH":
-            st.error("🚨 FALL DETECTED!")
 
         st.session_state.history.append({
             "Activity": predicted_class,
             "Confidence": confidence
         })
 
-# ---------------- UPLOAD SPECTROGRAM ----------------
+# ---------------- UPLOAD ----------------
 elif menu == "Upload Spectrogram":
 
-    uploaded_file = st.file_uploader("Upload Radar Spectrogram", type=["png","jpg","jpeg"])
+    uploaded_file = st.file_uploader("Upload Spectrogram")
 
     if uploaded_file:
-
-        col1, col2 = st.columns(2)
         image = Image.open(uploaded_file)
-
-        with col1:
-            st.image(image, caption="Uploaded Spectrogram")
+        st.image(image)
 
         img = image.resize((160,160))
         img = np.array(img)/255.0
@@ -224,70 +190,20 @@ elif menu == "Upload Spectrogram":
 
         prediction = model.predict(img)
         scores = prediction[0]*100
+
         predicted_class = model_classes[np.argmax(scores)]
         confidence = float(np.max(scores))
 
+        st.success(predicted_class.upper())
+
+        # 🚨 EMERGENCY SOUND
         if predicted_class == "falling" and confidence > 75:
-            risk = "HIGH"
-            color = "red"
-        elif predicted_class == "sitting":
-            risk = "MEDIUM"
-            color = "orange"
-        else:
-            risk = "LOW"
-            color = "green"
-
-        st.session_state.history.append({
-            "Activity": predicted_class,
-            "Confidence": confidence
-        })
-
-        with col2:
-            st.metric("Activity", predicted_class.upper())
-            st.metric("Confidence", f"{confidence:.2f}%")
-            st.metric("Risk", risk)
-
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=confidence,
-                gauge={'axis':{'range':[0,100]},
-                       'bar':{'color':color}}
-            ))
-            st.plotly_chart(fig, use_container_width=True)
-
-            # ----------- ADDED: VOICE ALERT -----------
-            def play_voice(message):
-                st.markdown(f"""
-                <audio autoplay>
-                <source src="https://translate.google.com/translate_tts?ie=UTF-8&q={message}&tl=en&client=tw-ob">
-                </audio>
-                """, unsafe_allow_html=True)
-
-            if predicted_class == "falling":
-                play_voice("Emergency! Person is falling")
-            elif predicted_class == "sitting":
-                play_voice("Person is sitting")
-            elif predicted_class == "walking":
-                play_voice("Person is walking")
-
-        # ----------- ADDED: GRAPH ANALYTICS -----------
-        st.subheader("Prediction Analytics")
-
-        col3, col4 = st.columns(2)
-
-        with col3:
-            pie_df = pd.DataFrame({
-                "Label":[predicted_class,"Other Activities"],
-                "Value":[confidence,100-confidence]
-            })
-            st.plotly_chart(px.pie(pie_df, names="Label", values="Value"))
-
-        with col4:
-            score_df = pd.DataFrame({
-                "Activity":model_classes,
-                "Confidence":scores
-            })
-            st.plotly_chart(px.bar(score_df, x="Activity", y="Confidence"))
+            st.error("🚨 FALL DETECTED!")
+            st.markdown("""
+            <audio autoplay>
+            <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
+            </audio>
+            """, unsafe_allow_html=True)
 
 # ---------------- HISTORY ----------------
 elif menu == "Detection History":
@@ -297,51 +213,6 @@ elif menu == "Detection History":
 # ---------------- SYSTEM INFO ----------------
 elif menu == "System Info":
 
-    st.markdown("## 🖥️ System Information Dashboard")
-
-    st.markdown("""
-    <style>
-    .card {
-        padding: 20px;
-        border-radius: 12px;
-        background-color: #1f2937;
-        color: white;
-        margin-bottom: 15px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-    }
-    .title {
-        font-size: 20px;
-        font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="card"><div class="title">📌 Project Overview</div>'
-                'Radar-based system that detects human activities like falling, sitting, walking, and standing using AI.</div>',
-                unsafe_allow_html=True)
-
-    st.markdown('<div class="card"><div class="title">🧠 AI Model</div>'
-                'Convolutional Neural Network (CNN) trained on radar spectrogram images.</div>',
-                unsafe_allow_html=True)
-
-    st.markdown('<div class="card"><div class="title">⚙️ Features</div>'
-                '✔ Live Camera Detection<br>'
-                '✔ Fall Detection with Alert<br>'
-                '✔ Spectrogram Analysis<br>'
-                '✔ Upload Prediction System<br>'
-                '✔ Detection History Tracking<br>'
-                '✔ Data Visualization Dashboard</div>',
-                unsafe_allow_html=True)
-
-    st.markdown('<div class="card"><div class="title">💻 Technology Stack</div>'
-                'Python • TensorFlow • OpenCV • Streamlit • Plotly</div>',
-                unsafe_allow_html=True)
-
-    st.markdown('<div class="card"><div class="title">📡 System Status</div>'
-                '🟢 Model Loaded<br>'
-                '🟢 Camera Ready<br>'
-                '🟢 AI Detection Active</div>',
-                unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.caption("🚀 Final Year Project | Radar Intelligent Surveillance System")
+    st.markdown('<div class="card">📡 AI Radar Surveillance System</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card">🧠 CNN Model for Activity Recognition</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card">⚙️ Features: Detection, Alerts, Analytics</div>', unsafe_allow_html=True)
