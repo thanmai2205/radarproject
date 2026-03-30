@@ -43,11 +43,15 @@ if not st.session_state.logged_in:
 
 # ---------------- LOAD MODEL (SAFE) ----------------
 import os
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(current_dir, "radar_model.h5")
+model_path = os.path.join(current_dir, "radar_model.keras")
 
-model = tf.keras.models.load_model(model_path, compile=False)
-
+model = tf.keras.models.load_model(
+    model_path,
+    compile=False,
+    safe_mode=False
+)
 class_names = ["falling", "sitting", "walking"]
 
 # ---------------- SESSION STORAGE ----------------
