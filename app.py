@@ -9,10 +9,8 @@ import cv2
 from scipy.signal import spectrogram
 import plotly.graph_objects as go
 
-# ---------------- PAGE ----------------
 st.set_page_config(page_title="Radar Intelligent Surveillance", layout="wide")
 
-# ----------- UI STYLE (ADDED ONLY) -----------
 st.markdown("""
 <style>
 .card {
@@ -29,9 +27,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- LOGIN ----------------
 def login():
-    st.title("🔐 Radar Surveillance Login")
+    st.title(" Radar Surveillance Login")
 
     users = {
         "admin": "radar123",
@@ -54,7 +51,6 @@ if not st.session_state.logged_in:
     login()
     st.stop()
 
-# ---------------- MODEL ----------------
 current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(current_dir, "radar_model.keras")
 
@@ -63,11 +59,9 @@ model = tf.keras.models.load_model(model_path, compile=False, safe_mode=False)
 model_classes = ["falling", "sitting", "walking"]
 display_classes = ["falling", "sitting", "standing", "walking"]
 
-# ---------------- SESSION ----------------
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# ---------------- SIDEBAR ----------------
 st.sidebar.title("📡 Radar Control Panel")
 
 menu = st.sidebar.radio(
@@ -78,10 +72,8 @@ menu = st.sidebar.radio(
 if st.sidebar.button("Reset History"):
     st.session_state.history = []
 
-# ---------------- HEADER ----------------
-st.title("🚀 Radar Based Intelligent Surveillance")
+st.title("Radar Based Intelligent Surveillance")
 
-# ---------------- SPECTROGRAM ----------------
 def image_to_spectrogram(img1, img2):
     gray1 = cv2.cvtColor(np.array(img1), cv2.COLOR_RGB2GRAY)
     gray2 = cv2.cvtColor(np.array(img2), cv2.COLOR_RGB2GRAY)
@@ -107,12 +99,11 @@ def image_to_spectrogram(img1, img2):
 
     return spec_img, diff, motion_level
 
-# ---------------- DASHBOARD ----------------
 if menu == "Dashboard":
     st.metric("Total Detections", len(st.session_state.history))
 
     # ----------- ADDED DASHBOARD VISUALS -----------
-    st.markdown("### 📊 Activity Overview")
+    st.markdown("###  Activity Overview")
 
     if len(st.session_state.history) > 0:
 
@@ -145,10 +136,9 @@ if menu == "Dashboard":
     else:
         st.info("No data available yet. Start detection to see analytics.")
 
-# ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
 
-    st.subheader("📷 Live AI Surveillance")
+    st.subheader(" Live AI Surveillance")
     st.info("Capture 2 frames (move slightly)")
 
     img1 = st.camera_input("Frame 1")
@@ -193,9 +183,9 @@ elif menu == "Live Camera":
         st.success(f"Prediction: {predicted_class.upper()}")
         st.info(f"Confidence: {confidence:.2f}%")
 
-        # 🚨 EMERGENCY SOUND
+    
         if predicted_class == "falling" and confidence > 75:
-            st.error("🚨 FALL DETECTED!")
+            st.error(" FALL DETECTED!")
             st.markdown("""
             <audio autoplay>
             <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
@@ -207,7 +197,7 @@ elif menu == "Live Camera":
             "Confidence": confidence
         })
 
-# ---------------- UPLOAD SPECTROGRAM ----------------
+
 elif menu == "Upload Spectrogram":
 
     uploaded_file = st.file_uploader("Upload Radar Spectrogram", type=["png","jpg","jpeg"])
@@ -260,16 +250,14 @@ elif menu == "Upload Spectrogram":
 
             st.plotly_chart(fig,use_container_width=True)
 
-            # 🚨 ALARM
             if predicted_class == "falling" and confidence > 75:
-                st.error("🚨 HIGH RISK ACTIVITY DETECTED!")
+                st.error(" HIGH RISK ACTIVITY DETECTED!")
                 st.markdown("""
                 <audio autoplay>
                 <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
                 </audio>
                 """, unsafe_allow_html=True)
 
-        # ---------- ANALYTICS ----------
         st.subheader("Prediction Analytics")
 
         col3,col4 = st.columns(2)
@@ -288,15 +276,15 @@ elif menu == "Upload Spectrogram":
             })
             st.plotly_chart(px.bar(score_df, x="Activity", y="Confidence"))
 
-# ---------------- HISTORY ----------------
+
 elif menu == "Detection History":
     df = pd.DataFrame(st.session_state.history)
     st.dataframe(df)
 
-# ---------------- SYSTEM INFO ----------------
+
 elif menu == "System Info":
 
-    st.markdown("## 🖥️ System Information Dashboard")
+    st.markdown("##  System Information Dashboard")
 
     st.markdown("""
     <style>
@@ -315,11 +303,11 @@ elif menu == "System Info":
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="card"><div class="title">📌 Project Overview</div>'
+    st.markdown('<div class="card"><div class="title"> Project Overview</div>'
                 'Radar-based system that detects human activities like falling, sitting, walking, and standing using AI.</div>',
                 unsafe_allow_html=True)
 
-    st.markdown('<div class="card"><div class="title">🧠 AI Model</div>'
+    st.markdown('<div class="card"><div class="title"> AI Model</div>'
                 'Convolutional Neural Network (CNN) trained on radar spectrogram images.</div>',
                 unsafe_allow_html=True)
 
@@ -332,16 +320,15 @@ elif menu == "System Info":
                 '✔ Data Visualization Dashboard</div>',
                 unsafe_allow_html=True)
 
-    st.markdown('<div class="card"><div class="title">💻 Technology Stack</div>'
+    st.markdown('<div class="card"><div class="title"> Technology Stack</div>'
                 'Python • TensorFlow • OpenCV • Streamlit • Plotly</div>',
                 unsafe_allow_html=True)
 
     st.markdown('<div class="card"><div class="title">📡 System Status</div>'
-                '🟢 Model Loaded<br>'
-                '🟢 Camera Ready<br>'
-                '🟢 AI Detection Active</div>',
+                ' Model Loaded<br>'
+                ' AI Detection Active</div>',
                 unsafe_allow_html=True)
 
     st.markdown("---")
-    st.caption("🚀 Final Year Project | Radar Intelligent Surveillance System")
+    st.caption("Radar Intelligent Surveillance System")
 
