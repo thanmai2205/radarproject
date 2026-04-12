@@ -137,6 +137,7 @@ if menu == "Dashboard":
         st.info("No data available yet. Start detection to see analytics.")
 
 # ---------------- LIVE CAMERA ----------------
+# ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
 
     st.subheader(" Live AI Surveillance")
@@ -156,26 +157,26 @@ elif menu == "Live Camera":
         st.image(diff, caption="Motion Difference")
 
         st.markdown('<div class="highlight-img">', unsafe_allow_html=True)
-        st.image(spec_img[0], caption="Spectrogram")
-        
-        # ✅ ADDITION 1 → BIG SPECTROGRAM
-        st.image(spec_img[0], caption="Time-Doppler Spectrogram (Enhanced View)", width=600)
+
+        # ✅ SINGLE BIG SPECTROGRAM
+        st.image(spec_img[0], caption="Time-Doppler Spectrogram", width=600)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ✅ ADDITION 2 → PROFESSIONAL SIDE EXPLANATION
-        col1, col2 = st.columns([2,1])
-        with col1:
-            st.image(spec_img[0], width=600)
+        # ✅ PROFESSIONAL DESCRIPTION
+        st.markdown("""
+        ### 📊 Spectrogram Description
+        This Time-Doppler spectrogram represents motion dynamics extracted from consecutive frames.
 
-        with col2:
-            st.markdown("""
-            ### 📡 Radar Interpretation
-            • Standing → Low signal variation  
-            • Walking → Periodic motion pattern  
-            • Falling → Sudden high spike  
-            • Generated using STFT (Time-Frequency Analysis)
-            """)
+        • X-axis → Time progression  
+        • Y-axis → Frequency (motion changes)  
+        • Color intensity → Strength of movement  
+
+        Activity patterns:
+        • Standing → Minimal variation (flat pattern)  
+        • Walking → Repetitive wave-like pattern  
+        • Falling → Sudden high-intensity spike  
+        """)
 
         prediction = model.predict(spec_img)
         scores = prediction[0] * 100
@@ -202,20 +203,20 @@ elif menu == "Live Camera":
         st.success(f"Prediction: {predicted_class.upper()}")
         st.info(f"Confidence: {confidence:.2f}%")
 
-        # ✅ ADDITION 3 → CONFIDENCE BAR
+        # ✅ CONFIDENCE BAR
         st.progress(int(confidence))
 
-        # ✅ ADDITION 4 → LIVE STATUS
+        # ✅ LIVE STATUS
         st.markdown("### 🟢 Live Monitoring Active")
 
-        # ✅ ADDITION 5 → MOTION INTENSITY
+        # ✅ MOTION INTENSITY
         st.markdown("### 📊 Motion Intensity")
         st.progress(int(min(motion_level * 10, 100)))
 
-        # ✅ ADDITION 6 → STATUS BADGE
+        # ✅ STATUS BADGE
         st.success(f"🟢 System Stable | Risk Level: {risk}")
 
-        # ✅ ADDITION 7 → ENHANCED BUZZER ALERT
+        # ✅ ALERT SYSTEM
         if predicted_class == "falling" and confidence > 75:
             st.error("🚨 EMERGENCY ALERT: FALL DETECTED 🚨")
             st.markdown("""
