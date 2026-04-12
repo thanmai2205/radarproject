@@ -136,6 +136,7 @@ if menu == "Dashboard":
     else:
         st.info("No data available yet. Start detection to see analytics.")
 
+# ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
 
     st.subheader(" Live AI Surveillance")
@@ -156,7 +157,25 @@ elif menu == "Live Camera":
 
         st.markdown('<div class="highlight-img">', unsafe_allow_html=True)
         st.image(spec_img[0], caption="Spectrogram")
+        
+        # ✅ ADDITION 1 → BIG SPECTROGRAM
+        st.image(spec_img[0], caption="Time-Doppler Spectrogram (Enhanced View)", width=600)
+
         st.markdown('</div>', unsafe_allow_html=True)
+
+        # ✅ ADDITION 2 → PROFESSIONAL SIDE EXPLANATION
+        col1, col2 = st.columns([2,1])
+        with col1:
+            st.image(spec_img[0], width=600)
+
+        with col2:
+            st.markdown("""
+            ### 📡 Radar Interpretation
+            • Standing → Low signal variation  
+            • Walking → Periodic motion pattern  
+            • Falling → Sudden high spike  
+            • Generated using STFT (Time-Frequency Analysis)
+            """)
 
         prediction = model.predict(spec_img)
         scores = prediction[0] * 100
@@ -183,11 +202,24 @@ elif menu == "Live Camera":
         st.success(f"Prediction: {predicted_class.upper()}")
         st.info(f"Confidence: {confidence:.2f}%")
 
-    
+        # ✅ ADDITION 3 → CONFIDENCE BAR
+        st.progress(int(confidence))
+
+        # ✅ ADDITION 4 → LIVE STATUS
+        st.markdown("### 🟢 Live Monitoring Active")
+
+        # ✅ ADDITION 5 → MOTION INTENSITY
+        st.markdown("### 📊 Motion Intensity")
+        st.progress(int(min(motion_level * 10, 100)))
+
+        # ✅ ADDITION 6 → STATUS BADGE
+        st.success(f"🟢 System Stable | Risk Level: {risk}")
+
+        # ✅ ADDITION 7 → ENHANCED BUZZER ALERT
         if predicted_class == "falling" and confidence > 75:
-            st.error(" FALL DETECTED!")
+            st.error("🚨 EMERGENCY ALERT: FALL DETECTED 🚨")
             st.markdown("""
-            <audio autoplay>
+            <audio autoplay loop>
             <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
             </audio>
             """, unsafe_allow_html=True)
@@ -196,8 +228,6 @@ elif menu == "Live Camera":
             "Activity": predicted_class,
             "Confidence": confidence
         })
-
-
 elif menu == "Upload Spectrogram":
 
     uploaded_file = st.file_uploader("Upload Radar Spectrogram", type=["png","jpg","jpeg"])
