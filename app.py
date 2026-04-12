@@ -102,7 +102,6 @@ def image_to_spectrogram(img1, img2):
 if menu == "Dashboard":
     st.metric("Total Detections", len(st.session_state.history))
 
-    # ----------- ADDED DASHBOARD VISUALS -----------
     st.markdown("###  Activity Overview")
 
     if len(st.session_state.history) > 0:
@@ -135,9 +134,6 @@ if menu == "Dashboard":
 
     else:
         st.info("No data available yet. Start detection to see analytics.")
-
-# ---------------- LIVE CAMERA ----------------
-# ---------------- LIVE CAMERA ----------------
 elif menu == "Live Camera":
 
     st.subheader(" Live AI Surveillance")
@@ -158,14 +154,10 @@ elif menu == "Live Camera":
 
         st.markdown('<div class="highlight-img">', unsafe_allow_html=True)
 
-        # ✅ SINGLE BIG SPECTROGRAM
         st.image(spec_img[0], caption="Time-Doppler Spectrogram", width=600)
 
         st.markdown('</div>', unsafe_allow_html=True)
-
-        # ✅ PROFESSIONAL DESCRIPTION
         st.markdown("""
-        ### 📊 Spectrogram Description
         This Time-Doppler spectrogram represents motion dynamics extracted from consecutive frames.
 
         • X-axis → Time progression  
@@ -173,7 +165,7 @@ elif menu == "Live Camera":
         • Color intensity → Strength of movement  
 
         Activity patterns:
-        • Standing → Minimal variation (flat pattern)  
+        • Sitting → Minimal variation (flat pattern)  
         • Walking → Repetitive wave-like pattern  
         • Falling → Sudden high-intensity spike  
         """)
@@ -203,20 +195,17 @@ elif menu == "Live Camera":
         st.success(f"Prediction: {predicted_class.upper()}")
         st.info(f"Confidence: {confidence:.2f}%")
 
-        # ✅ CONFIDENCE BAR
         st.progress(int(confidence))
 
-        # ✅ LIVE STATUS
         st.markdown("### 🟢 Live Monitoring Active")
 
-        # ✅ MOTION INTENSITY
+    
         st.markdown("### 📊 Motion Intensity")
         st.progress(int(min(motion_level * 10, 100)))
 
-        # ✅ STATUS BADGE
+    
         st.success(f"🟢 System Stable | Risk Level: {risk}")
 
-        # ✅ ALERT SYSTEM
         if predicted_class == "falling" and confidence > 75:
             st.error("🚨 EMERGENCY ALERT: FALL DETECTED 🚨")
             st.markdown("""
